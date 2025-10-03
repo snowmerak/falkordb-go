@@ -2,7 +2,7 @@
 [![GitHub issues](https://img.shields.io/github/release/FalkorDB/falkordb-go.svg)](https://github.com/FalkorDB/falkordb-go/releases/latest)
 [![Codecov](https://codecov.io/gh/FalkorDB/falkordb-go/branch/master/graph/badge.svg)](https://codecov.io/gh/FalkorDB/falkordb-go)
 [![Go Report Card](https://goreportcard.com/badge/github.com/FalkorDB/falkordb-go)](https://goreportcard.com/report/github.com/FalkorDB/falkordb-go)
-[![GoDoc](https://pkg.go.dev/badge/github.com/FalkorDB/falkordb-go/v2.svg)](https://pkg.go.dev/github.com/FalkorDB/falkordb-go/v2)
+[![Go Reference](https://pkg.go.dev/badge/github.com/FalkorDB/falkordb-go/v2.svg)](https://pkg.go.dev/github.com/FalkorDB/falkordb-go/v2)
 
 # falkordb-go
 [![Discord](https://img.shields.io/discord/1146782921294884966?style=flat-square)](https://discord.gg/6M4QwDXn2w)
