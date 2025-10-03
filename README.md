@@ -2,7 +2,7 @@
 [![GitHub issues](https://img.shields.io/github/release/FalkorDB/falkordb-go.svg)](https://github.com/FalkorDB/falkordb-go/releases/latest)
 [![Codecov](https://codecov.io/gh/FalkorDB/falkordb-go/branch/master/graph/badge.svg)](https://codecov.io/gh/FalkorDB/falkordb-go)
 [![Go Report Card](https://goreportcard.com/badge/github.com/FalkorDB/falkordb-go)](https://goreportcard.com/report/github.com/FalkorDB/falkordb-go)
-[![GoDoc](https://godoc.org/github.com/FalkorDB/falkordb-go?status.svg)](https://godoc.org/github.com/FalkorDB/falkordb-go/v2)
+[![GoDoc](https://pkg.go.dev/github.com/FalkorDB/falkordb-go/v2?status.svg)](https://pkg.go.dev/github.com/FalkorDB/falkordb-go/v2)
 
 # falkordb-go
 [![Discord](https://img.shields.io/discord/1146782921294884966?style=flat-square)](https://discord.gg/6M4QwDXn2w)
@@ -10,7 +10,6 @@
 `falkordb-go` is a Golang client for the [FalkorDB](https://falkordb.com) database.
 
 ## Installation
-
 
 Make sure to initialize a Go module:
 
@@ -21,12 +20,12 @@ go mod init github.com/my/repo
 Simply do:
 
 ```sh
-$ go get github.com/falkordb/falkordb-go
+$ go get github.com/FalkorDB/falkordb-go/v2
 ```
 
 ## Usage
 
-The complete `falkordb-go` API is documented on [GoDoc](https://godoc.org/github.com/falkordb/falkordb-go).
+The complete `falkordb-go` API is documented on [GoDoc](https://pkg.go.dev/github.com/FalkorDB/falkordb-go/v2).
 
 ```go
 package main
@@ -35,7 +34,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/falkordb/falkordb-go"
+	"github.com/FalkorDB/falkordb-go/v2"
 )
 
 func main() {
@@ -120,7 +119,13 @@ A simple test suite is provided, and can be run with:
 $ go test
 ```
 
-The tests expect a FalkorDB server to be available at localhost:6379
+The tests expect a FalkorDB server to be available at localhost:6379.
+
+If you don't have FalkorDB running locally and you're using Docker, you can start a FalkorDB instance with:
+
+```sh
+$ docker run -p 6379:6379 -p 3000:3000 -it --rm falkordb/falkordb:edge
+```
 
 ## License
 
