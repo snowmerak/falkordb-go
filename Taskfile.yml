@@ -1,0 +1,13 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  cluster:up:
+    desc: "Start FalkorDB cluster"
+    cmds:
+      - docker-compose -f docker-compose.cluster.yml up -d
+  cluster:down:
+    desc: "Stop FalkorDB cluster"
+    cmds:
+      - docker-compose -f docker-compose.cluster.yml down -v

@@ -1,0 +1,82 @@
+version: '3.9'
+
+services:
+  falkordb1:
+    image: falkordb/falkordb:latest
+    container_name: falkordb1
+    ports:
+      - "9379:9379"
+      - "9380:9380"
+      - "9381:9381"
+      - "19379:19379"
+      - "19380:19380"
+      - "19381:19381"
+    environment:
+      - REDIS_ARGS=--port 9379 --cluster-enabled yes --cluster-node-timeout 5000 --appendonly yes --cluster-announce-ip 127.0.0.1 --cluster-announce-port 9379 --cluster-announce-bus-port 19379
+    volumes:
+      - falkordb1_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "9379", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+
+  falkordb2:
+    image: falkordb/falkordb:latest
+    container_name: falkordb2
+    network_mode: "service:falkordb1"
+    environment:
+      - REDIS_ARGS=--port 9380 --cluster-enabled yes --cluster-node-timeout 5000 --appendonly yes --cluster-announce-ip 127.0.0.1 --cluster-announce-port 9380 --cluster-announce-bus-port 19380
+      - BROWSER=0
+    volumes:
+      - falkordb2_data:/data
+    depends_on:
+      falkordb1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "9380", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+
+  falkordb3:
+    image: falkordb/falkordb:latest
+    container_name: falkordb3
+    network_mode: "service:falkordb1"
+    environment:
+      - REDIS_ARGS=--port 9381 --cluster-enabled yes --cluster-node-timeout 5000 --appendonly yes --cluster-announce-ip 127.0.0.1 --cluster-announce-port 9381 --cluster-announce-bus-port 19381
+      - BROWSER=0
+    volumes:
+      - falkordb3_data:/data
+    depends_on:
+      falkordb1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "9381", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+
+  cluster-init:
+    image: falkordb/falkordb:latest
+    container_name: cluster-init
+    network_mode: "service:falkordb1"
+    entrypoint: /bin/sh
+    command: >
+      -c "echo 'Waiting for nodes to start...' && 
+      sleep 5 && 
+      echo 'Creating cluster...' && 
+      redis-cli -p 9379 --cluster create 127.0.0.1:9379 127.0.0.1:9380 127.0.0.1:9381 --cluster-replicas 0 --cluster-yes && 
+      echo 'Cluster created!'"
+    depends_on:
+      falkordb1:
+        condition: service_healthy
+      falkordb2:
+        condition: service_healthy
+      falkordb3:
+        condition: service_healthy
+
+volumes:
+  falkordb1_data:
+  falkordb2_data:
+  falkordb3_data:
