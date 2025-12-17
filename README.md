@@ -21,7 +21,7 @@ go mod init github.com/my/repo
 Simply do:
 
 ```sh
-$ go get github.com/FalkorBB/falkordb-go/v2
+$ go get github.com/FalkorDB/falkordb-go/v2
 ```
 
 ## Usage
