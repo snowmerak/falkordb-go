@@ -24,16 +24,16 @@ tasks:
     desc: "Run tests against standalone FalkorDB"
     cmds:
       - task: standalone:up
-      - FALKORDB_ADDR=0.0.0.0:6379 FALKORDB_TEST_MODE=standalone go test -v ./...
-      - task: standalone:down
-
+      - defer: task standalone:down
+      - FALKORDB_ADDR=0.0.0.0:9379 FALKORDB_TEST_MODE=standalone go test -v ./...
+      
   test:cluster:
     desc: "Run tests against FalkorDB cluster"
     cmds:
       - task: cluster:up
-      - sleep 10 # Wait for cluster to be ready
+      - defer: task cluster:down
+      - sleep 5
       - FALKORDB_ADDR=0.0.0.0:9379 FALKORDB_TEST_MODE=cluster go test -v ./...
-      - task: cluster:down
 
   test:
     desc: "Run all tests"
