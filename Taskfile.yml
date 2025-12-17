@@ -11,3 +11,11 @@ tasks:
     desc: "Stop FalkorDB cluster"
     cmds:
       - docker-compose -f docker-compose.cluster.yml down -v
+  standalone:up:
+    desc: "Start FalkorDB standalone"
+    cmds:
+      - docker-compose -f docker-compose.standalone.yml up -d
+  standalone:down:
+    desc: "Stop FalkorDB standalone"
+    cmds:
+      - docker-compose -f docker-compose.standalone.yml down -v
