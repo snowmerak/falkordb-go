@@ -11,14 +11,19 @@ import (
 var ctx = context.Background()
 
 type FalkorDB struct {
-	Conn *redis.Client
+	Conn redis.UniversalClient
 }
 
 type ConnectionOption = redis.Options
 
-func isSentinel(conn *redis.Client) bool {
-	info, _ := conn.InfoMap(ctx, "server").Result()
-	return info["Server"]["redis_mode"] == "sentinel"
+type ConnectionClusterOption = redis.ClusterOptions
+
+func isSentinel(conn redis.UniversalClient) bool {
+	if c, ok := conn.(*redis.Client); ok {
+		info, _ := c.InfoMap(ctx, "server").Result()
+		return info["Server"]["redis_mode"] == "sentinel"
+	}
+	return false
 }
 
 // FalkorDB Class for interacting with a FalkorDB server.
@@ -53,6 +58,12 @@ func FalkorDBNew(options *ConnectionOption) (*FalkorDB, error) {
 			PoolTimeout:      options.PoolTimeout,
 		})
 	}
+	return &FalkorDB{Conn: db}, nil
+}
+
+// FalkorDBNewCluster creates a new FalkorDB cluster instance.
+func FalkorDBNewCluster(options *ConnectionClusterOption) (*FalkorDB, error) {
+	db := redis.NewClusterClient(options)
 	return &FalkorDB{Conn: db}, nil
 }
 
