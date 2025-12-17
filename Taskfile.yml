@@ -32,7 +32,7 @@ tasks:
     cmds:
       - task: cluster:up
       - defer: task cluster:down
-      - sleep 5
+      - sleep 10
       - FALKORDB_ADDR=0.0.0.0:9379 FALKORDB_TEST_MODE=cluster go test -v ./...
 
   test:
