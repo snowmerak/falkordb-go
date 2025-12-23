@@ -10,11 +10,24 @@ import (
 	"github.com/snowmerak/falkordb-go/util/strs"
 )
 
+const (
+	graphQueryCmd   = "GRAPH.QUERY"
+	graphROQueryCmd = "GRAPH.RO_QUERY"
+)
+
 var ctx = context.Background()
 
 // QueryOptions are a set of additional arguments to be emitted with a query.
 type QueryOptions struct {
 	timeout int
+}
+
+// QueryRequest represents a single graph command to enqueue in a pipeline.
+type QueryRequest struct {
+	Command string
+	Query   string
+	Params  map[string]interface{}
+	Options *QueryOptions
 }
 
 // Graph represents a graph, which is a collection of nodes and edges.
@@ -75,13 +88,14 @@ func (g *Graph) query(command string, query string, params map[string]interface{
 	if params != nil {
 		query = BuildParamsHeader(params) + query
 	}
-	var r interface{}
-	var err error
+
+	args := []interface{}{g.Id, query, "--compact"}
 	if options != nil && options.timeout >= 0 {
-		r, err = g.Conn.Do(ctx, command, g.Id, query, "--compact", "timeout", options.timeout).Result()
-	} else {
-		r, err = g.Conn.Do(ctx, command, g.Id, query, "--compact").Result()
+		args = append(args, "timeout", options.timeout)
 	}
+
+	cmdArgs := append([]interface{}{command}, args...)
+	r, err := g.Conn.Do(ctx, cmdArgs...).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -89,14 +103,64 @@ func (g *Graph) query(command string, query string, params map[string]interface{
 	return QueryResultNew(g, r)
 }
 
+// Pipeline executes multiple graph commands in a single round-trip and returns results in order.
+// Each request can target GRAPH.QUERY or GRAPH.RO_QUERY via the Command field (defaults to GRAPH.QUERY).
+func (g *Graph) Pipeline(reqs []QueryRequest) ([]*QueryResult, error) {
+	if len(reqs) == 0 {
+		return nil, nil
+	}
+
+	pipe := g.Conn.Pipeline()
+	cmds := make([]*redis.Cmd, len(reqs))
+
+	for i, req := range reqs {
+		q := req.Query
+		if req.Params != nil {
+			q = BuildParamsHeader(req.Params) + q
+		}
+
+		args := []interface{}{g.Id, q, "--compact"}
+		if req.Options != nil && req.Options.timeout >= 0 {
+			args = append(args, "timeout", req.Options.timeout)
+		}
+
+		command := req.Command
+		if command == "" {
+			command = graphQueryCmd
+		}
+
+		cmdArgs := append([]interface{}{command}, args...)
+		cmds[i] = pipe.Do(ctx, cmdArgs...)
+	}
+
+	if _, err := pipe.Exec(ctx); err != nil {
+		return nil, err
+	}
+
+	results := make([]*QueryResult, len(reqs))
+	for i, cmd := range cmds {
+		if err := cmd.Err(); err != nil {
+			return nil, err
+		}
+		r := cmd.Val()
+		qr, err := QueryResultNew(g, r)
+		if err != nil {
+			return nil, err
+		}
+		results[i] = qr
+	}
+
+	return results, nil
+}
+
 // Query executes a query against the graph.
 func (g *Graph) Query(query string, params map[string]interface{}, options *QueryOptions) (*QueryResult, error) {
-	return g.query("GRAPH.QUERY", query, params, options)
+	return g.query(graphQueryCmd, query, params, options)
 }
 
 // ROQuery executes a read only query against the graph.
 func (g *Graph) ROQuery(query string, params map[string]interface{}, options *QueryOptions) (*QueryResult, error) {
-	return g.query("GRAPH.RO_QUERY", query, params, options)
+	return g.query(graphROQueryCmd, query, params, options)
 }
 
 // Procedures
