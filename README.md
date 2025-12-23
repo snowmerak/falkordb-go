@@ -1,105 +1,93 @@
 [![license](https://img.shields.io/github/license/snowmerak/falkordb-go.svg)](https://github.com/snowmerak/falkordb-go)
 [![Codecov](https://codecov.io/gh/snowmerak/falkordb-go/branch/master/graph/badge.svg)](https://codecov.io/gh/snowmerak/falkordb-go)
 [![Go Report Card](https://goreportcard.com/badge/github.com/snowmerak/falkordb-go)](https://goreportcard.com/report/github.com/snowmerak/falkordb-go)
-[![GoDoc](https://godoc.org/github.com/snowmerak/falkordb-go?status.svg)](https://godoc.org/github.com/snowmerak/falkordb-go)
+[![Go Reference](https://pkg.go.dev/badge/github.com/snowmerak/falkordb-go.svg)](https://pkg.go.dev/github.com/snowmerak/falkordb-go)
 
 # falkordb-go
 
 `falkordb-go` is a Golang client for the [FalkorDB](https://falkordb.com) database.
 
-## Installation
+## Overview
+- Lightweight client with simple Query/ROQuery APIs.
+- Parses nodes, edges, paths, arrays, maps, points, and vectors into Go types.
+- Exposes query statistics plus PrettyPrint for quick inspection.
+- Supports single instance, cluster, sentinel discovery, and TLS via URL schemes.
+- `trunk` is the primary, up-to-date branch.
 
-
-Make sure to initialize a Go module:
+## Quick start
+1) Start a local FalkorDB (standalone):
 
 ```
-go mod init github.com/my/repo
+docker compose -f docker-compose.standalone.yml up -d
 ```
 
-Simply do:
+2) Add the client to your module:
 
-```sh
-$ go get github.com/snowmerak/falkordb-go
+```
+go get github.com/snowmerak/falkordb-go
 ```
 
-## Usage
-
-The complete `falkordb-go` API is documented on [GoDoc](https://godoc.org/github.com/snowmerak/falkordb-go).
+3) Run a minimal query:
 
 ```go
 package main
 
 import (
-	"fmt"
-	"log"
+    "log"
 
-	"github.com/snowmerak/falkordb-go"
+    "github.com/snowmerak/falkordb-go"
+    "github.com/snowmerak/falkordb-go/graph"
 )
 
 func main() {
-	db, _ := falkordb.FalkorDBNew(&falkordb.ConnectionOption{Addr: "0.0.0.0:6379"})
-	// db, _ := falkodb.FalkorDBNewCluster(&falkordb.ConnectionClusterOption{Addrs: "0.0.0.0:6379"})
+    db, err := falkordb.FromURL("falkor://0.0.0.0:6379")
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	graph := db.SelectGraph("social")
+    g := db.SelectGraph("social")
 
-	query := "CREATE (:Person {name: 'John Doe', age: 33, gender: 'male', status: 'single'})-[:VISITED]->(:Country {name: 'Japan'})"
-	_, err := graph.Query(query, nil, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+    _, err = g.Query("CREATE (:Person {name:'John Doe', age:33})", nil, nil)
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	query = "MATCH (p:Person)-[v:VISITED]->(c:Country) RETURN p.name, p.age, c.name"
-	// result is a QueryResult struct containing the query's generated records and statistics.
-	result, err := graph.Query(query, nil, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+    opts := graph.NewQueryOptions().SetTimeout(10) // ms timeout
+    res, err := g.Query("MATCH (p:Person) RETURN p.name, p.age", nil, opts)
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	// Pretty-print the full result set as a table.
-	result.PrettyPrint()
-
-	// Iterate over each individual Record in the result.
-	fmt.Println("Visited countries by person:")
-	for result.Next() { // Next returns true until the iterator is depleted.
-		// Get the current Record.
-		r := result.Record()
-
-		// Entries in the Record can be accessed by index or key.
-		pName := r.GetByIndex(0)
-		fmt.Printf("\nName: %s\n", pName)
-		pAge, _ := r.Get("p.age")
-		fmt.Printf("\nAge: %d\n", pAge)
-	}
-
-	// Path matching example.
-	query = "MATCH p = (:Person)-[:VISITED]->(:Country) RETURN p"
-	result, err = graph.Query(query, nil, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Pathes of persons visiting countries:")
-	for result.Next() {
-		r := result.Record()
-		p, ok := r.GetByIndex(0).(falkordb.Path)
-		fmt.Printf("%s %v\n", p, ok)
-	}
+    res.PrettyPrint()
 }
 ```
 
-Running the above produces the output:
+## Usage and examples
 
-```sh
-+----------+-------+--------+
-|  p.name  | p.age | c.name |
-+----------+-------+--------+
-| John Doe |    33 | Japan  |
-+----------+-------+--------+
+The complete API is documented on [pkg.go.dev](https://pkg.go.dev/github.com/snowmerak/falkordb-go).
 
-Query internal execution time 1.623063
+- Query vs ROQuery
 
-Name: John Doe
+```go
+res, err := g.Query("MATCH (p:Person) RETURN p.name", nil, nil)
+roRes, err := g.ROQuery("MATCH (p:Person) RETURN p.name", nil, nil)
+```
 
-Age: 33
+- Iterating results
+
+```go
+for res.Next() {
+    r := res.Record()
+    name := r.GetByIndex(0)
+    log.Printf("name=%v", name)
+}
+```
+
+- With timeouts (milliseconds)
+
+```go
+opts := graph.NewQueryOptions().SetTimeout(5)
+res, err := g.Query("UNWIND range(0, 1000000) AS v RETURN v", nil, opts)
 ```
 
 ## Running queries with timeouts
@@ -107,19 +95,31 @@ Age: 33
 Queries can be run with a millisecond-level timeout as described in [the documentation](https://docs.falkordb.com/configuration.html#timeout). To take advantage of this feature, the `QueryOptions` struct should be used:
 
 ```go
-options := NewQueryOptions().SetTimeout(10) // 10-millisecond timeout
-res, err := graph.Query("MATCH (src {name: 'John Doe'})-[*]->(dest) RETURN dest", nil, options)
+options := graph.NewQueryOptions().SetTimeout(10) // 10-millisecond timeout
+res, err := g.Query("MATCH (src {name: 'John Doe'})-[*]->(dest) RETURN dest", nil, options)
 ```
+
+## Connection options
+- Single instance: `falkordb.FalkorDBNew(&falkordb.ConnectionOption{Addr: "0.0.0.0:6379"})`
+- Cluster: `falkordb.FalkorDBNewCluster(&falkordb.ConnectionClusterOption{Addrs: []string{"0.0.0.0:6379"}})`
+- URL-based (sentinel/TLS aware): `falkordb.FromURL("falkor://host:port")` or `falkors://` for TLS.
+- Environment defaults used in tests: `FALKORDB_ADDR` for host:port, `FALKORDB_TEST_MODE=cluster` to switch client mode.
+
+## Examples
+- Start a standalone server: `docker compose -f docker-compose.standalone.yml up -d`
+- Start a clustered server: `docker compose -f docker-compose.cluster.yml up -d`
 
 ## Running tests
 
 A simple test suite is provided, and can be run with:
 
-```sh
+```
 task test
+# or
+go test ./...
 ```
 
-The tests expect a FalkorDB server to be available at localhost:6379
+The tests expect a FalkorDB server to be available at localhost:6379 (or the address in `FALKORDB_ADDR`). Task automation is defined in `Taskfile.yml`.
 
 ## License
 
