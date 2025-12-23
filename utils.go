@@ -42,27 +42,23 @@ func ToString(i interface{}) string {
 		return "null"
 	}
 
-	switch i.(type) {
+	switch i := i.(type) {
 	case string:
-		s := i.(string)
-		return strconv.Quote(s)
+		return strconv.Quote(i)
 	case int:
-		return strconv.Itoa(i.(int))
+		return strconv.Itoa(i)
 	case int64:
-		return strconv.FormatInt(i.(int64), 10)
+		return strconv.FormatInt(i, 10)
 	case float64:
-		return strconv.FormatFloat(i.(float64), 'f', -1, 64)
+		return strconv.FormatFloat(i, 'f', -1, 64)
 	case bool:
-		return strconv.FormatBool(i.(bool))
+		return strconv.FormatBool(i)
 	case []interface{}:
-		arr := i.([]interface{})
-		return arrayToString(arr)
+		return arrayToString(i)
 	case map[string]interface{}:
-		data := i.(map[string]interface{})
-		return mapToString(data)
+		return mapToString(i)
 	case []string:
-		arr := i.([]string)
-		return strArrayToString(arr)
+		return strArrayToString(i)
 	default:
 		panic("Unrecognized type to convert to string")
 	}
