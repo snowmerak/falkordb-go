@@ -119,7 +119,7 @@ task test
 go test ./...
 ```
 
-The tests expect a FalkorDB server to be available at localhost:6379 (or the address in `FALKORDB_ADDR`). Task automation is defined in `Taskfile.yml`.
+The tests expect a FalkorDB server to be available at localhost:6379 (or the address in `FALKORDB_ADDR`). Task automation is defined in [`Taskfile.yml`](https://taskfile.dev).
 
 ## License
 
