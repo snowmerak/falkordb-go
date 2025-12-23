@@ -1,11 +1,9 @@
 [![license](https://img.shields.io/github/license/FalkorDB/falkordb-go.svg)](https://github.com/FalkorDB/falkordb-go)
-[![GitHub issues](https://img.shields.io/github/release/FalkorDB/falkordb-go.svg)](https://github.com/FalkorDB/falkordb-go/releases/latest)
-[![Codecov](https://codecov.io/gh/FalkorDB/falkordb-go/branch/master/graph/badge.svg)](https://codecov.io/gh/FalkorDB/falkordb-go)
-[![Go Report Card](https://goreportcard.com/badge/github.com/FalkorDB/falkordb-go)](https://goreportcard.com/report/github.com/FalkorDB/falkordb-go)
-[![GoDoc](https://godoc.org/github.com/FalkorDB/falkordb-go?status.svg)](https://godoc.org/github.com/FalkorDB/falkordb-go/v2)
+[![Codecov](https://codecov.io/gh/snowmerak/falkordb-go/branch/master/graph/badge.svg)](https://codecov.io/gh/snowmerak/falkordb-go)
+[![Go Report Card](https://goreportcard.com/badge/github.com/snowmerak/falkordb-go)](https://goreportcard.com/report/github.com/snowmerak/falkordb-go)
+[![GoDoc](https://godoc.org/github.com/snowmerak/falkordb-go?status.svg)](https://godoc.org/github.com/snowmerak/falkordb-go)
 
 # falkordb-go
-[![Discord](https://img.shields.io/discord/1146782921294884966?style=flat-square)](https://discord.gg/6M4QwDXn2w)
 
 `falkordb-go` is a Golang client for the [FalkorDB](https://falkordb.com) database.
 
@@ -21,7 +19,7 @@ go mod init github.com/my/repo
 Simply do:
 
 ```sh
-$ go get github.com/FalkorDB/falkordb-go/v2
+$ go get github.com/snowmerak/falkordb-go
 ```
 
 ## Usage
@@ -35,7 +33,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/FalkorDB/falkordb-go/v2"
+	"github.com/snowmerak/falkordb-go"
 )
 
 func main() {
@@ -118,7 +116,7 @@ res, err := graph.Query("MATCH (src {name: 'John Doe'})-[*]->(dest) RETURN dest"
 A simple test suite is provided, and can be run with:
 
 ```sh
-$ go test
+task test
 ```
 
 The tests expect a FalkorDB server to be available at localhost:6379

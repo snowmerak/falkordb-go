@@ -1,4 +1,4 @@
-module github.com/FalkorDB/falkordb-go/v2
+module github.com/snowmerak/falkordb-go
 
 go 1.21
 
