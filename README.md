@@ -89,6 +89,27 @@ opts := graph.NewQueryOptions().SetTimeout(5)
 res, err := g.Query("UNWIND range(0, 1000000) AS v RETURN v", nil, opts)
 ```
 
+- Pipelined batch queries
+
+```go
+reqs := []graph.QueryRequest{
+    { // defaults to GRAPH.QUERY when Command is empty
+        Query:   "MATCH (p:Person) RETURN p",
+        Options: graph.NewQueryOptions().SetTimeout(50),
+    },
+    {
+        Command: graph.CmdROQuery, // or graph.CmdQuery / empty for write queries
+        Query:   "MATCH (c:Country {name:$name}) RETURN c",
+        Params:  map[string]interface{}{"name": "Japan"},
+    },
+}
+batch, err := g.Pipeline(reqs)
+if err != nil {
+    log.Fatal(err)
+}
+// batch[0], batch[1] are ordered results
+```
+
 ## Running queries with timeouts
 
 Queries can be run with a millisecond-level timeout as described in [the documentation](https://docs.falkordb.com/configuration.html#timeout). To take advantage of this feature, the `QueryOptions` struct should be used:
