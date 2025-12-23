@@ -129,7 +129,7 @@ func FromURL(url string) (*FalkorDB, error) {
 }
 
 // Selects a graph by creating a new Graph instance.
-func (db *FalkorDB) SelectGraph(graphName string) *Graph {
+func (db *FalkorDB) SelectGraph(graphName string) *graph.Graph {
 	return graph.New(graphName, db.Conn)
 }
 

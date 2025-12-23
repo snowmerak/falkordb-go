@@ -4,10 +4,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/snowmerak/falkordb-go/graph"
 	"github.com/stretchr/testify/assert"
 )
 
-var graphInstance *Graph
+var graphInstance *graph.Graph
 var db *FalkorDB
 
 func createGraph() {
@@ -75,7 +76,7 @@ func TestMatchROQuery(t *testing.T) {
 	checkQueryResults(t, res)
 }
 
-func checkQueryResults(t *testing.T, res *QueryResult) {
+func checkQueryResults(t *testing.T, res *graph.QueryResult) {
 	assert.Equal(t, len(res.Results()), 1, "expecting 1 result record")
 
 	res.Next()
@@ -477,7 +478,7 @@ func TestNodeMapDatatype(t *testing.T) {
 
 func TestTimeout(t *testing.T) {
 	// Instantiate a new QueryOptions struct with a 1-second timeout
-	options := NewQueryOptions().SetTimeout(1)
+	options := graph.NewQueryOptions().SetTimeout(1)
 
 	// Verify that the timeout was set properly
 	assert.Equal(t, 1, options.GetTimeout())
