@@ -76,7 +76,7 @@ func TestMatchROQuery(t *testing.T) {
 }
 
 func checkQueryResults(t *testing.T, res *QueryResult) {
-	assert.Equal(t, len(res.results), 1, "expecting 1 result record")
+	assert.Equal(t, len(res.Results()), 1, "expecting 1 result record")
 
 	res.Next()
 	r := res.Record()
@@ -172,7 +172,7 @@ func TestArray(t *testing.T) {
 
 	res.Next()
 	r := res.Record()
-	assert.Equal(t, len(res.results), 1, "expecting 1 result record")
+	assert.Equal(t, len(res.Results()), 1, "expecting 1 result record")
 	assert.Equal(t, []interface{}{int64(0), int64(1), int64(2)}, r.GetByIndex(0))
 
 	q = "unwind([0,1,2]) as x return x"
@@ -180,7 +180,7 @@ func TestArray(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	assert.Equal(t, len(res.results), 3, "expecting 3 result record")
+	assert.Equal(t, len(res.Results()), 3, "expecting 3 result record")
 
 	i := 0
 	for res.Next() {
@@ -206,7 +206,7 @@ func TestArray(t *testing.T) {
 	b.SetProperty("age", int64(30))
 	b.SetProperty("array", []interface{}{int64(3), int64(4), int64(5)})
 
-	assert.Equal(t, 1, len(res.results), "expecting 1 results record")
+	assert.Equal(t, 1, len(res.Results()), "expecting 1 results record")
 
 	res.Next()
 	r = res.Record()
@@ -269,7 +269,7 @@ func TestPath(t *testing.T) {
 		t.Error(err)
 	}
 
-	assert.Equal(t, len(res.results), 1, "expecting 1 result record")
+	assert.Equal(t, len(res.Results()), 1, "expecting 1 result record")
 
 	res.Next()
 	r := res.Record()
@@ -395,7 +395,7 @@ func TestQueryStatistics(t *testing.T) {
 	q = "MATCH p = (:Person)-[:Visited]->(:Country) RETURN p"
 	res, err = graphInstance.Query(q, nil, nil)
 	assert.Nil(t, err)
-	assert.Equal(t, len(res.results), 1, "expecting 1 result record")
+	assert.Equal(t, len(res.Results()), 1, "expecting 1 result record")
 	assert.Equal(t, false, res.Empty(), "Expecting resultset to have records")
 	res, err = graphInstance.Query("MATCH ()-[r]-() DELETE r", nil, nil)
 	assert.Nil(t, err)
@@ -468,7 +468,7 @@ func TestNodeMapDatatype(t *testing.T) {
 	assert.Equal(t, true, res.Empty(), "Expecting empty resultset")
 	res, err = graphInstance.Query("MATCH p = (:Person)-[:Visited]->(:Country) RETURN p", nil, nil)
 	assert.Nil(t, err)
-	assert.Equal(t, len(res.results), 1, "expecting 1 result record")
+	assert.Equal(t, len(res.Results()), 1, "expecting 1 result record")
 	assert.Equal(t, false, res.Empty(), "Expecting resultset to have records")
 	res, err = graphInstance.Query("MATCH ()-[r]-() DELETE r", nil, nil)
 	assert.Nil(t, err)
