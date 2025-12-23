@@ -3,6 +3,7 @@ package falkordb
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/redis/go-redis/v9"
@@ -31,16 +32,29 @@ func FalkorDBNew(options *ConnectionOption) (*FalkorDB, error) {
 	db := redis.NewClient(options)
 
 	if isSentinel(db) {
-		masters, err := db.Do(ctx, "SENTINEL", "MASTERS").Result()
+		mastersRaw, err := db.Do(ctx, "SENTINEL", "MASTERS").Result()
 		if err != nil {
 			return nil, err
 		}
-		if len(masters.([]interface{})) != 1 {
+		masters, ok := mastersRaw.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("unexpected sentinel masters type %T", mastersRaw)
+		}
+		if len(masters) != 1 {
 			return nil, errors.New("multiple masters, require service name")
 		}
-		str := "name"
-		var strInterface interface{} = str
-		masterName := masters.([]interface{})[0].(map[interface{}]interface{})[strInterface].(string)
+		m0, ok := masters[0].(map[interface{}]interface{})
+		if !ok {
+			return nil, errors.New("sentinel master entry malformed")
+		}
+		nameRaw, ok := m0["name"]
+		if !ok {
+			return nil, errors.New("sentinel master missing name")
+		}
+		masterName, ok := nameRaw.(string)
+		if !ok {
+			return nil, errors.New("sentinel master name not string")
+		}
 		db = redis.NewFailoverClient(&redis.FailoverOptions{
 			MasterName:       masterName,
 			SentinelAddrs:    []string{options.Addr},
@@ -81,14 +95,29 @@ func FromURL(url string) (*FalkorDB, error) {
 	}
 	db := redis.NewClient(options)
 	if isSentinel(db) {
-		masters, err := db.Do(ctx, "SENTINEL", "MASTERS").Result()
+		mastersRaw, err := db.Do(ctx, "SENTINEL", "MASTERS").Result()
 		if err != nil {
 			return nil, err
 		}
-		if len(masters.([]interface{})) != 1 {
+		masters, ok := mastersRaw.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("unexpected sentinel masters type %T", mastersRaw)
+		}
+		if len(masters) != 1 {
 			return nil, errors.New("multiple masters, require service name")
 		}
-		masterName := masters.([]interface{})[0].(map[string]interface{})["name"].(string)
+		m0, ok := masters[0].(map[string]interface{})
+		if !ok {
+			return nil, errors.New("sentinel master entry malformed")
+		}
+		nameRaw, ok := m0["name"]
+		if !ok {
+			return nil, errors.New("sentinel master missing name")
+		}
+		masterName, ok := nameRaw.(string)
+		if !ok {
+			return nil, errors.New("sentinel master name not string")
+		}
 		db = redis.NewFailoverClient(&redis.FailoverOptions{
 			MasterName:    masterName,
 			SentinelAddrs: []string{options.Addr},

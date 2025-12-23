@@ -77,13 +77,31 @@ func QueryResultNew(g *Graph, response interface{}) (*QueryResult, error) {
 		currentRecordIdx: -1,
 	}
 
-	r := response.([]interface{})
+	r, ok := response.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unexpected response type %T", response)
+	}
+
+	if len(r) == 0 {
+		return nil, errors.New("empty response payload")
+	}
 
 	if len(r) == 1 {
-		qr.parseStatistics(r[0])
-	} else {
-		qr.parseResults(r)
-		qr.parseStatistics(r[2])
+		if err := qr.parseStatistics(r[0]); err != nil {
+			return nil, err
+		}
+		return qr, nil
+	}
+
+	if len(r) < 3 {
+		return nil, fmt.Errorf("unexpected response length %d", len(r))
+	}
+
+	if err := qr.parseResults(r); err != nil {
+		return nil, err
+	}
+	if err := qr.parseStatistics(r[2]); err != nil {
+		return nil, err
 	}
 
 	return qr, nil
@@ -93,49 +111,116 @@ func (qr *QueryResult) Empty() bool {
 	return len(qr.results) == 0
 }
 
-func (qr *QueryResult) parseResults(raw_result_set []interface{}) {
+func (qr *QueryResult) parseResults(raw_result_set []interface{}) error {
+	if len(raw_result_set) < 2 {
+		return errors.New("result set missing header or records")
+	}
+
 	header := raw_result_set[0]
-	qr.parseHeader(header)
-	qr.parseRecords(raw_result_set)
+	if err := qr.parseHeader(header); err != nil {
+		return err
+	}
+
+	if err := qr.parseRecords(raw_result_set); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (qr *QueryResult) parseStatistics(raw_statistics interface{}) {
-	statistics := raw_statistics.([]interface{})
+func (qr *QueryResult) parseStatistics(raw_statistics interface{}) error {
+	statistics, ok := raw_statistics.([]interface{})
+	if !ok {
+		return fmt.Errorf("statistics payload is not array: %T", raw_statistics)
+	}
 	qr.statistics = make(map[string]float64)
 
 	for _, rs := range statistics {
-		v := strings.Split(rs.(string), ": ")
-		f, _ := strconv.ParseFloat(strings.Split(v[1], " ")[0], 64)
-		qr.statistics[v[0]] = f
+		rsStr, ok := rs.(string)
+		if !ok {
+			return fmt.Errorf("statistic entry not string: %T", rs)
+		}
+		parts := strings.SplitN(rsStr, ": ", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid statistic format: %s", rsStr)
+		}
+		numPart := strings.Split(parts[1], " ")
+		if len(numPart) == 0 || numPart[0] == "" {
+			return fmt.Errorf("missing statistic value in: %s", rsStr)
+		}
+		f, err := strconv.ParseFloat(numPart[0], 64)
+		if err != nil {
+			return fmt.Errorf("invalid statistic value %q: %w", numPart[0], err)
+		}
+		qr.statistics[parts[0]] = f
 	}
+
+	return nil
 }
 
-func (qr *QueryResult) parseHeader(raw_header interface{}) {
-	header := raw_header.([]interface{})
+func (qr *QueryResult) parseHeader(raw_header interface{}) error {
+	header, ok := raw_header.([]interface{})
+	if !ok {
+		return fmt.Errorf("header payload is not array: %T", raw_header)
+	}
 
 	for _, col := range header {
-		c := col.([]interface{})
-		ct := c[0].(int64)
-		cn := c[1].(string)
+		c, ok := col.([]interface{})
+		if !ok || len(c) < 2 {
+			return errors.New("invalid header column format")
+		}
+		ct, ok := c[0].(int64)
+		if !ok {
+			return errors.New("header column type is not int64")
+		}
+		cn, ok := c[1].(string)
+		if !ok {
+			return errors.New("header column name is not string")
+		}
 
 		qr.header.column_types = append(qr.header.column_types, ResultSetColumnTypes(ct))
 		qr.header.column_names = append(qr.header.column_names, cn)
 	}
+
+	if len(qr.header.column_types) != len(qr.header.column_names) {
+		return errors.New("header column metadata length mismatch")
+	}
+
+	return nil
 }
 
 func (qr *QueryResult) parseRecords(raw_result_set []interface{}) error {
-	records := raw_result_set[1].([]interface{})
+	records, ok := raw_result_set[1].([]interface{})
+	if !ok {
+		return fmt.Errorf("records payload is not array: %T", raw_result_set[1])
+	}
+
+	if len(qr.header.column_types) != len(qr.header.column_names) {
+		return errors.New("header metadata not initialized")
+	}
+
 	qr.results = make([]*Record, len(records))
 
 	for i, r := range records {
-		cells := r.([]interface{})
+		cells, ok := r.([]interface{})
+		if !ok {
+			return fmt.Errorf("record %d is not array", i)
+		}
+		if len(cells) != len(qr.header.column_types) {
+			return fmt.Errorf("record %d column count mismatch: got %d want %d", i, len(cells), len(qr.header.column_types))
+		}
+
 		values := make([]interface{}, len(cells))
 
 		for idx, c := range cells {
 			t := qr.header.column_types[idx]
 			switch t {
 			case COLUMN_SCALAR:
-				s, err := qr.parseScalar(c.([]interface{}))
+				cval, ok := c.([]interface{})
+				if !ok {
+					return fmt.Errorf("record %d column %d not scalar payload", i, idx)
+				}
+				s, err := qr.parseScalar(cval)
 				if err != nil {
 					return err
 				}
@@ -165,8 +250,14 @@ func (qr *QueryResult) parseProperties(props []interface{}) (map[string]interfac
 	// [[name, value type, value] X N]
 	properties := make(map[string]interface{})
 	for _, prop := range props {
-		p := prop.([]interface{})
-		idx := p[0].(int64)
+		p, ok := prop.([]interface{})
+		if !ok || len(p) < 3 {
+			return nil, errors.New("invalid property format")
+		}
+		idx, ok := p[0].(int64)
+		if !ok {
+			return nil, errors.New("property index not int64")
+		}
 		prop_name, err := qr.graph.schema.getProperty(int(idx))
 		if err != nil {
 			return nil, err
@@ -186,19 +277,35 @@ func (qr *QueryResult) parseNode(cell interface{}) (*Node, error) {
 	// [label string offset (integer)],
 	// [[name, value type, value] X N]
 
-	c := cell.([]interface{})
-	id := c[0].(int64)
-	labelIds := c[1].([]interface{})
+	c, ok := cell.([]interface{})
+	if !ok || len(c) < 3 {
+		return nil, errors.New("invalid node payload")
+	}
+	id, ok := c[0].(int64)
+	if !ok {
+		return nil, errors.New("node id not int64")
+	}
+	labelIds, ok := c[1].([]interface{})
+	if !ok {
+		return nil, errors.New("node labels not array")
+	}
 	labels := make([]string, len(labelIds))
 	for i := 0; i < len(labelIds); i++ {
-		label, err := qr.graph.schema.getLabel(int(labelIds[i].(int64)))
+		lid, ok := labelIds[i].(int64)
+		if !ok {
+			return nil, errors.New("label id not int64")
+		}
+		label, err := qr.graph.schema.getLabel(int(lid))
 		if err != nil {
 			return nil, err
 		}
 		labels[i] = label
 	}
 
-	rawProps := c[2].([]interface{})
+	rawProps, ok := c[2].([]interface{})
+	if !ok {
+		return nil, errors.New("node properties not array")
+	}
 	properties, err := qr.parseProperties(rawProps)
 	if err != nil {
 		return nil, err
@@ -216,17 +323,35 @@ func (qr *QueryResult) parseEdge(cell interface{}) (*Edge, error) {
 	// dest node ID offset (integer),
 	// [[name, value, value type] X N]
 
-	c := cell.([]interface{})
-	id := c[0].(int64)
-	r := c[1].(int64)
+	c, ok := cell.([]interface{})
+	if !ok || len(c) < 5 {
+		return nil, errors.New("invalid edge payload")
+	}
+	id, ok := c[0].(int64)
+	if !ok {
+		return nil, errors.New("edge id not int64")
+	}
+	r, ok := c[1].(int64)
+	if !ok {
+		return nil, errors.New("edge relation id not int64")
+	}
 	relation, err := qr.graph.schema.getRelation(int(r))
 	if err != nil {
 		return nil, err
 	}
 
-	src_node_id := c[2].(int64)
-	dest_node_id := c[3].(int64)
-	rawProps := c[4].([]interface{})
+	src_node_id, ok := c[2].(int64)
+	if !ok {
+		return nil, errors.New("edge src id not int64")
+	}
+	dest_node_id, ok := c[3].(int64)
+	if !ok {
+		return nil, errors.New("edge dest id not int64")
+	}
+	rawProps, ok := c[4].([]interface{})
+	if !ok {
+		return nil, errors.New("edge properties not array")
+	}
 	properties, err := qr.parseProperties(rawProps)
 	if err != nil {
 		return nil, err
@@ -240,10 +365,17 @@ func (qr *QueryResult) parseEdge(cell interface{}) (*Edge, error) {
 }
 
 func (qr *QueryResult) parseArray(cell interface{}) ([]interface{}, error) {
-	var array = cell.([]interface{})
+	array, ok := cell.([]interface{})
+	if !ok {
+		return nil, errors.New("array payload is not array")
+	}
 	var arrayLength = len(array)
 	for i := 0; i < arrayLength; i++ {
-		s, err := qr.parseScalar(array[i].([]interface{}))
+		inner, ok := array[i].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("array element %d not scalar payload", i)
+		}
+		s, err := qr.parseScalar(inner)
 		if err != nil {
 			return nil, err
 		}
@@ -253,26 +385,76 @@ func (qr *QueryResult) parseArray(cell interface{}) ([]interface{}, error) {
 }
 
 func (qr *QueryResult) parsePath(cell interface{}) (Path, error) {
-	arrays := cell.([]interface{})
-	nodes, err := qr.parseScalar(arrays[0].([]interface{}))
+	arrays, ok := cell.([]interface{})
+	if !ok || len(arrays) < 2 {
+		return Path{}, errors.New("path payload invalid")
+	}
+	nodesRaw, ok := arrays[0].([]interface{})
+	if !ok {
+		return Path{}, errors.New("path nodes payload invalid")
+	}
+	edgesRaw, ok := arrays[1].([]interface{})
+	if !ok {
+		return Path{}, errors.New("path edges payload invalid")
+	}
+	nodesVal, err := qr.parseScalar(nodesRaw)
 	if err != nil {
 		return Path{}, err
 	}
-	edges, err := qr.parseScalar(arrays[1].([]interface{}))
+	edgesVal, err := qr.parseScalar(edgesRaw)
 	if err != nil {
 		return Path{}, err
 	}
-	return PathNew(nodes.([]interface{}), edges.([]interface{})), nil
+	nodesSlice, ok := nodesVal.([]interface{})
+	if !ok {
+		return Path{}, errors.New("parsed path nodes not array")
+	}
+	edgesSlice, ok := edgesVal.([]interface{})
+	if !ok {
+		return Path{}, errors.New("parsed path edges not array")
+	}
+
+	path := Path{Nodes: make([]*Node, len(nodesSlice)), Edges: make([]*Edge, len(edgesSlice))}
+	for i := range nodesSlice {
+		n, ok := nodesSlice[i].(*Node)
+		if !ok {
+			return Path{}, errors.New("path node element not *Node")
+		}
+		path.Nodes[i] = n
+	}
+	for i := range edgesSlice {
+		e, ok := edgesSlice[i].(*Edge)
+		if !ok {
+			return Path{}, errors.New("path edge element not *Edge")
+		}
+		path.Edges[i] = e
+	}
+
+	return path, nil
 }
 
 func (qr *QueryResult) parseMap(cell interface{}) (map[string]interface{}, error) {
-	var raw_map = cell.([]interface{})
+	raw_map, ok := cell.([]interface{})
+	if !ok {
+		return nil, errors.New("map payload not array")
+	}
 	var mapLength = len(raw_map)
 	var parsed_map = make(map[string]interface{})
 
+	if mapLength%2 != 0 {
+		return nil, errors.New("map payload length is not even")
+	}
+
 	for i := 0; i < mapLength; i += 2 {
-		key := raw_map[i].(string)
-		s, err := qr.parseScalar(raw_map[i+1].([]interface{}))
+		key, ok := raw_map[i].(string)
+		if !ok {
+			return nil, errors.New("map key not string")
+		}
+		valRaw, ok := raw_map[i+1].([]interface{})
+		if !ok {
+			return nil, errors.New("map value payload not scalar array")
+		}
+		s, err := qr.parseScalar(valRaw)
 		if err != nil {
 			return nil, err
 		}
@@ -283,43 +465,89 @@ func (qr *QueryResult) parseMap(cell interface{}) (map[string]interface{}, error
 }
 
 func (qr *QueryResult) parsePoint(cell interface{}) (map[string]interface{}, error) {
-	var parsed_point = make(map[string]interface{})
-	var array = cell.([]interface{})
-	lat, _ := strconv.ParseFloat(array[0].(string), 64)
+	parsed_point := make(map[string]interface{})
+	array, ok := cell.([]interface{})
+	if !ok || len(array) < 2 {
+		return nil, errors.New("point payload invalid")
+	}
+	latStr, ok := array[0].(string)
+	if !ok {
+		return nil, errors.New("point latitude not string")
+	}
+	lat, err := strconv.ParseFloat(latStr, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid latitude: %w", err)
+	}
 	parsed_point["latitude"] = lat
-	lon, _ := strconv.ParseFloat(array[1].(string), 64)
+	lonStr, ok := array[1].(string)
+	if !ok {
+		return nil, errors.New("point longitude not string")
+	}
+	lon, err := strconv.ParseFloat(lonStr, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid longitude: %w", err)
+	}
 	parsed_point["longitude"] = lon
 	return parsed_point, nil
 }
 
 func (qr *QueryResult) parseVectorF32(cell interface{}) ([]float32, error) {
-	var array = cell.([]interface{})
+	array, ok := cell.([]interface{})
+	if !ok {
+		return nil, errors.New("vector payload not array")
+	}
 	var arrayLength = len(array)
 	var res = make([]float32, arrayLength)
 	for i := 0; i < arrayLength; i++ {
-		res[i] = float32(array[i].(float64))
+		f, ok := array[i].(float64)
+		if !ok {
+			return nil, errors.New("vector element not float64")
+		}
+		res[i] = float32(f)
 	}
 	return res, nil
 }
 
 func (qr *QueryResult) parseScalar(cell []interface{}) (interface{}, error) {
-	t := cell[0].(int64)
+	if len(cell) < 2 {
+		return nil, errors.New("scalar cell too short")
+	}
+	t, ok := cell[0].(int64)
+	if !ok {
+		return nil, errors.New("scalar type not int64")
+	}
 	v := cell[1]
 	switch ResultSetScalarTypes(t) {
 	case VALUE_NULL:
 		return nil, nil
 
 	case VALUE_STRING:
-		return v.(string), nil
+		s, ok := v.(string)
+		if !ok {
+			return nil, errors.New("string scalar not string")
+		}
+		return s, nil
 
 	case VALUE_INTEGER:
-		return v.(int64), nil
+		i, ok := v.(int64)
+		if !ok {
+			return nil, errors.New("integer scalar not int64")
+		}
+		return i, nil
 
 	case VALUE_BOOLEAN:
-		return v.(string) == "true", nil
+		s, ok := v.(string)
+		if !ok {
+			return nil, errors.New("boolean scalar not string")
+		}
+		return s == "true", nil
 
 	case VALUE_DOUBLE:
-		return strconv.ParseFloat(v.(string), 64)
+		s, ok := v.(string)
+		if !ok {
+			return nil, errors.New("double scalar not string")
+		}
+		return strconv.ParseFloat(s, 64)
 
 	case VALUE_ARRAY:
 		return qr.parseArray(v)

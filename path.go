@@ -11,19 +11,23 @@ type Path struct {
 }
 
 func PathNew(nodes []interface{}, edges []interface{}) Path {
-	Nodes := make([]*Node, len(nodes))
+	path := Path{Nodes: make([]*Node, len(nodes)), Edges: make([]*Edge, len(edges))}
 	for i := 0; i < len(nodes); i++ {
-		Nodes[i] = nodes[i].(*Node)
+		n, ok := nodes[i].(*Node)
+		if !ok {
+			return Path{}
+		}
+		path.Nodes[i] = n
 	}
-	Edges := make([]*Edge, len(edges))
 	for i := 0; i < len(edges); i++ {
-		Edges[i] = edges[i].(*Edge)
+		e, ok := edges[i].(*Edge)
+		if !ok {
+			return Path{}
+		}
+		path.Edges[i] = e
 	}
 
-	return Path{
-		Edges: Edges,
-		Nodes: Nodes,
-	}
+	return path
 }
 
 func (p Path) GetNodes() []*Node {
