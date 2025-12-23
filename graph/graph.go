@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -32,16 +33,23 @@ type QueryRequest struct {
 
 // Graph represents a graph, which is a collection of nodes and edges.
 type Graph struct {
-	Id     string
-	Conn   redis.UniversalClient
-	schema GraphSchema
+	Id       string
+	Conn     redis.UniversalClient
+	schema   GraphSchema
+	readonly bool
 }
 
 // New creates a new graph.
 func New(Id string, conn redis.UniversalClient) *Graph {
+	return NewWithMode(Id, conn, false)
+}
+
+// NewWithMode creates a new graph with explicit read-only mode.
+func NewWithMode(Id string, conn redis.UniversalClient, readonly bool) *Graph {
 	g := new(Graph)
 	g.Id = Id
 	g.Conn = conn
+	g.readonly = readonly
 	g.schema = GraphSchemaNew(g)
 	return g
 }
@@ -85,6 +93,9 @@ func (options *QueryOptions) GetTimeout() int {
 }
 
 func (g *Graph) query(command string, query string, params map[string]interface{}, options *QueryOptions) (*QueryResult, error) {
+	if g.readonly && command != CmdROQuery {
+		return nil, errors.New("graph is read-only")
+	}
 	if params != nil {
 		query = BuildParamsHeader(params) + query
 	}
@@ -127,6 +138,9 @@ func (g *Graph) Pipeline(reqs []QueryRequest) ([]*QueryResult, error) {
 		command := req.Command
 		if command == "" {
 			command = CmdQuery
+		}
+		if g.readonly && command != CmdROQuery {
+			return nil, errors.New("graph is read-only")
 		}
 
 		cmdArgs := append([]interface{}{command}, args...)

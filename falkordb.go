@@ -14,7 +14,8 @@ import (
 var ctx = context.Background()
 
 type FalkorDB struct {
-	Conn redis.UniversalClient
+	Conn     redis.UniversalClient
+	readonly bool
 }
 
 type ConnectionOption = redis.Options
@@ -29,8 +30,8 @@ func isSentinel(conn redis.UniversalClient) bool {
 	return false
 }
 
-// New creates a new FalkorDB instance.
-func New(options *ConnectionOption) (*FalkorDB, error) {
+// new creates a new FalkorDB instance.
+func new(options *ConnectionOption, isReadonly bool) (*FalkorDB, error) {
 	db := redis.NewClient(options)
 
 	if isSentinel(db) {
@@ -74,13 +75,38 @@ func New(options *ConnectionOption) (*FalkorDB, error) {
 			PoolTimeout:      options.PoolTimeout,
 		})
 	}
-	return &FalkorDB{Conn: db}, nil
+	return &FalkorDB{
+		Conn:     db,
+		readonly: isReadonly,
+	}, nil
+}
+
+// New creates a new FalkorDB instance.
+func New(options *ConnectionOption) (*FalkorDB, error) {
+	return new(options, false)
+}
+
+// NewReadOnly creates a new read-only FalkorDB instance.
+func NewReadOnly(options *ConnectionOption) (*FalkorDB, error) {
+	return new(options, true)
 }
 
 // NewCluster creates a new FalkorDB cluster instance.
 func NewCluster(options *ConnectionClusterOption) (*FalkorDB, error) {
 	db := redis.NewClusterClient(options)
-	return &FalkorDB{Conn: db}, nil
+	return &FalkorDB{
+		Conn:     db,
+		readonly: false,
+	}, nil
+}
+
+// NewClusterReadOnly creates a new read-only FalkorDB cluster instance.
+func NewClusterReadOnly(options *ConnectionClusterOption) (*FalkorDB, error) {
+	db := redis.NewClusterClient(options)
+	return &FalkorDB{
+		Conn:     db,
+		readonly: true,
+	}, nil
 }
 
 // Creates a new FalkorDB instance from a URL.
@@ -107,7 +133,7 @@ func FromClusterURL(urls string) (*FalkorDB, error) {
 
 // Selects a graph by creating a new Graph instance.
 func (db *FalkorDB) SelectGraph(graphName string) *graph.Graph {
-	return graph.New(graphName, db.Conn)
+	return graph.NewWithMode(graphName, db.Conn, db.readonly)
 }
 
 // List all graph names.
