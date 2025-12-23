@@ -1,4 +1,4 @@
-[![license](https://img.shields.io/github/license/FalkorDB/falkordb-go.svg)](https://github.com/FalkorDB/falkordb-go)
+[![license](https://img.shields.io/github/license/snowmerak/falkordb-go.svg)](https://github.com/snowmerak/falkordb-go)
 [![Codecov](https://codecov.io/gh/snowmerak/falkordb-go/branch/master/graph/badge.svg)](https://codecov.io/gh/snowmerak/falkordb-go)
 [![Go Report Card](https://goreportcard.com/badge/github.com/snowmerak/falkordb-go)](https://goreportcard.com/report/github.com/snowmerak/falkordb-go)
 [![GoDoc](https://godoc.org/github.com/snowmerak/falkordb-go?status.svg)](https://godoc.org/github.com/snowmerak/falkordb-go)
@@ -24,7 +24,7 @@ $ go get github.com/snowmerak/falkordb-go
 
 ## Usage
 
-The complete `falkordb-go` API is documented on [GoDoc](https://godoc.org/github.com/falkordb/falkordb-go).
+The complete `falkordb-go` API is documented on [GoDoc](https://godoc.org/github.com/snowmerak/falkordb-go).
 
 ```go
 package main
