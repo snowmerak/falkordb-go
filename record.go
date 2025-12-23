@@ -1,14 +1,20 @@
 package falkordb
 
 type Record struct {
-	values []interface{}
-	keys   []string
+	values  []interface{}
+	keys    []string
+	indices map[string]int
 }
 
 func recordNew(values []interface{}, keys []string) *Record {
 	r := &Record{
-		values: values,
-		keys:   keys,
+		values:  values,
+		keys:    keys,
+		indices: make(map[string]int, len(keys)),
+	}
+
+	for i, k := range keys {
+		r.indices[k] = i
 	}
 
 	return r
@@ -23,12 +29,17 @@ func (r *Record) Values() []interface{} {
 }
 
 func (r *Record) Get(key string) (interface{}, bool) {
-	// TODO: switch from []string to map[string]int
-	for i := range r.keys {
-		if r.keys[i] == key {
-			return r.values[i], true
+	if r.indices == nil {
+		r.indices = make(map[string]int, len(r.keys))
+		for i, k := range r.keys {
+			r.indices[k] = i
 		}
 	}
+
+	if idx, ok := r.indices[key]; ok {
+		return r.values[idx], true
+	}
+
 	return nil, false
 }
 
