@@ -331,7 +331,7 @@ func (qr *QueryResult) parseNode(cell interface{}) (*domain.Node, error) {
 		return nil, err
 	}
 
-	n := domain.NodeNew(labels, "", properties)
+	n := domain.NewNode(labels, "", properties)
 	n.ID = uint64(id)
 	return n, nil
 }
@@ -376,7 +376,7 @@ func (qr *QueryResult) parseEdge(cell interface{}) (*domain.Edge, error) {
 	if err != nil {
 		return nil, err
 	}
-	e := domain.EdgeNew(relation, nil, nil, properties)
+	e := domain.NewEdge(relation, nil, nil, properties)
 
 	e.ID = uint64(id)
 	e.SrcNodeID = uint64(src_node_id)

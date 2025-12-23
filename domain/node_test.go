@@ -2,12 +2,12 @@ package domain
 
 import "testing"
 
-func TestNodeNewDefaults(t *testing.T) {
-	n := NodeNew([]string{"L"}, "a", nil)
+func TestNewNodeDefaults(t *testing.T) {
+	n := NewNode([]string{"L"}, "a", nil)
 	if n == nil {
-		t.Fatalf("NodeNew returned nil")
+		t.Fatalf("NewNode returned nil")
 	}
 	if n.Properties == nil {
-		t.Fatalf("NodeNew should initialize Properties")
+		t.Fatalf("NewNode should initialize Properties")
 	}
 }

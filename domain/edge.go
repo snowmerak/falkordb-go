@@ -16,8 +16,8 @@ type Edge struct {
 	DestNodeID  uint64
 }
 
-// EdgeNew creates a new Edge.
-func EdgeNew(relation string, srcNode *Node, destNode *Node, properties map[string]interface{}) *Edge {
+// NewEdge creates a new Edge.
+func NewEdge(relation string, srcNode *Node, destNode *Node, properties map[string]interface{}) *Edge {
 	p := properties
 	if p == nil {
 		p = make(map[string]interface{})

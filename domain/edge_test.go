@@ -5,7 +5,7 @@ import "testing"
 func TestEdgeIDs(t *testing.T) {
 	src := &Node{ID: 1, Alias: "a"}
 	dst := &Node{ID: 2, Alias: "b"}
-	e := EdgeNew("R", src, dst, nil)
+	e := NewEdge("R", src, dst, nil)
 	e.ID = 3
 	e.SrcNodeID = 1
 	e.DestNodeID = 2

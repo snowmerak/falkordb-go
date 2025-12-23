@@ -153,18 +153,18 @@ func TestQueryResultNew_EdgeCases(t *testing.T) {
 	}
 }
 
-func TestPathNew_Safety(t *testing.T) {
+func TestNewPath_Safety(t *testing.T) {
 	// Test with invalid inputs to ensure no panics
-	p := domain.PathNew([]interface{}{"not a node"}, []interface{}{})
+	p := domain.NewPath([]interface{}{"not a node"}, []interface{}{})
 	assert.Empty(t, p.Nodes)
 	assert.Empty(t, p.Edges)
 
-	p = domain.PathNew([]interface{}{}, []interface{}{"not an edge"})
+	p = domain.NewPath([]interface{}{}, []interface{}{"not an edge"})
 	assert.Empty(t, p.Nodes)
 	assert.Empty(t, p.Edges)
 
 	// Valid empty path
-	p = domain.PathNew([]interface{}{}, []interface{}{})
+	p = domain.NewPath([]interface{}{}, []interface{}{})
 	assert.NotNil(t, p.Nodes)
 	assert.NotNil(t, p.Edges)
 	assert.Equal(t, 0, len(p.Nodes))

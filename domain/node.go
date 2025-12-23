@@ -13,8 +13,8 @@ type Node struct {
 	Properties map[string]interface{}
 }
 
-// NodeNew creates a new Node.
-func NodeNew(labels []string, alias string, properties map[string]interface{}) *Node {
+// NewNode creates a new Node.
+func NewNode(labels []string, alias string, properties map[string]interface{}) *Node {
 	p := properties
 	if p == nil {
 		p = make(map[string]interface{})

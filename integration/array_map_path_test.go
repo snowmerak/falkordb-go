@@ -53,8 +53,8 @@ func TestArray(t *testing.T) {
 		t.Error(err)
 	}
 
-	a := domain.NodeNew([]string{"person"}, "", nil)
-	b := domain.NodeNew([]string{"person"}, "", nil)
+	a := domain.NewNode([]string{"person"}, "", nil)
+	b := domain.NewNode([]string{"person"}, "", nil)
 
 	a.SetProperty("name", "a")
 	a.SetProperty("age", int64(32))

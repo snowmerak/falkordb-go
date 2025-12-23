@@ -10,7 +10,8 @@ type Path struct {
 	Edges []*Edge
 }
 
-func PathNew(nodes []interface{}, edges []interface{}) Path {
+// NewPath builds a Path from node and edge slices.
+func NewPath(nodes []interface{}, edges []interface{}) Path {
 	path := Path{Nodes: make([]*Node, len(nodes)), Edges: make([]*Edge, len(edges))}
 	for i := 0; i < len(nodes); i++ {
 		n, ok := nodes[i].(*Node)
