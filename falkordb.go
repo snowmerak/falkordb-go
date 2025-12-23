@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/redis/go-redis/v9"
+
+	"github.com/snowmerak/falkordb-go/graph"
 )
 
 var ctx = context.Background()
@@ -128,7 +130,7 @@ func FromURL(url string) (*FalkorDB, error) {
 
 // Selects a graph by creating a new Graph instance.
 func (db *FalkorDB) SelectGraph(graphName string) *Graph {
-	return graphNew(graphName, db.Conn)
+	return graph.New(graphName, db.Conn)
 }
 
 // List all graph names.

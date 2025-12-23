@@ -1,4 +1,4 @@
-package falkordb
+package graph
 
 import (
 	"errors"

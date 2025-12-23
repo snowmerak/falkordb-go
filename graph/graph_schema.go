@@ -1,4 +1,4 @@
-package falkordb
+package graph
 
 import (
 	"errors"
@@ -20,6 +20,15 @@ func GraphSchemaNew(graph *Graph) GraphSchema {
 		labels:        []string{},
 		relationships: []string{},
 		properties:    []string{},
+	}
+}
+
+// GraphSchemaWithData seeds schema metadata; primarily used in tests.
+func GraphSchemaWithData(labels, relationships, properties []string) GraphSchema {
+	return GraphSchema{
+		labels:        labels,
+		relationships: relationships,
+		properties:    properties,
 	}
 }
 

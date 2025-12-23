@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var graph *Graph
+var graphInstance *Graph
 var db *FalkorDB
 
 func createGraph() {
@@ -30,10 +30,10 @@ func createGraph() {
 		panic(err)
 	}
 
-	graph = db.SelectGraph("social")
-	graph.Delete()
+	graphInstance = db.SelectGraph("social")
+	graphInstance.Delete()
 
-	_, err = graph.Query("CREATE (:Person {name: 'John Doe', age: 33, gender: 'male', status: 'single'})-[:Visited {year: 2017}]->(c:Country {name: 'Japan', population: 126800000})", nil, nil)
+	_, err = graphInstance.Query("CREATE (:Person {name: 'John Doe', age: 33, gender: 'male', status: 'single'})-[:Visited {year: 2017}]->(c:Country {name: 'Japan', population: 126800000})", nil, nil)
 
 	if err != nil {
 		panic(err)
@@ -45,7 +45,7 @@ func setup() {
 }
 
 func shutdown() {
-	graph.Conn.Close()
+	graphInstance.Conn.Close()
 }
 
 func TestMain(m *testing.M) {
@@ -57,7 +57,7 @@ func TestMain(m *testing.M) {
 
 func TestMatchQuery(t *testing.T) {
 	q := "MATCH (s)-[e]->(d) RETURN s,e,d"
-	res, err := graph.Query(q, nil, nil)
+	res, err := graphInstance.Query(q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -67,7 +67,7 @@ func TestMatchQuery(t *testing.T) {
 
 func TestMatchROQuery(t *testing.T) {
 	q := "MATCH (s)-[e]->(d) RETURN s,e,d"
-	res, err := graph.ROQuery(q, nil, nil)
+	res, err := graphInstance.ROQuery(q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -107,7 +107,7 @@ func checkQueryResults(t *testing.T, res *QueryResult) {
 
 func TestCreateQuery(t *testing.T) {
 	q := "CREATE (w:WorkPlace {name:'FalkorDB'})"
-	res, err := graph.Query(q, nil, nil)
+	res, err := graphInstance.Query(q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -119,7 +119,7 @@ func TestCreateQuery(t *testing.T) {
 	assert.Equal(t, res.PropertiesSet(), 1, "Expecting a songle property to be added.")
 
 	q = "MATCH (w:WorkPlace) RETURN w"
-	res, err = graph.Query(q, nil, nil)
+	res, err = graphInstance.Query(q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -133,39 +133,39 @@ func TestCreateQuery(t *testing.T) {
 
 func TestCreateROQueryFailure(t *testing.T) {
 	q := "CREATE (w:WorkPlace {name:'FalkorDB'})"
-	_, err := graph.ROQuery(q, nil, nil)
+	_, err := graphInstance.ROQuery(q, nil, nil)
 	assert.NotNil(t, err, "error should not be nil")
 }
 
 func TestErrorReporting(t *testing.T) {
 	q := "RETURN toupper(5)"
-	res, err := graph.Query(q, nil, nil)
+	res, err := graphInstance.Query(q, nil, nil)
 	assert.Nil(t, res)
 	assert.NotNil(t, err)
 
 	q = "MATCH (p:Person) RETURN toupper(p.age)"
-	res, err = graph.Query(q, nil, nil)
+	res, err = graphInstance.Query(q, nil, nil)
 	assert.Nil(t, res)
 	assert.NotNil(t, err)
 }
 
 func TestArray(t *testing.T) {
-	graph.Query("MATCH (n) DELETE n", nil, nil)
+	graphInstance.Query("MATCH (n) DELETE n", nil, nil)
 
 	q := "CREATE (:person{name:'a',age:32,array:[0,1,2]})"
-	res, err := graph.Query(q, nil, nil)
+	res, err := graphInstance.Query(q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
 
 	q = "CREATE (:person{name:'b',age:30,array:[3,4,5]})"
-	res, err = graph.Query(q, nil, nil)
+	res, err = graphInstance.Query(q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
 
 	q = "WITH [0,1,2] as x return x"
-	res, err = graph.Query(q, nil, nil)
+	res, err = graphInstance.Query(q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -176,7 +176,7 @@ func TestArray(t *testing.T) {
 	assert.Equal(t, []interface{}{int64(0), int64(1), int64(2)}, r.GetByIndex(0))
 
 	q = "unwind([0,1,2]) as x return x"
-	res, err = graph.Query(q, nil, nil)
+	res, err = graphInstance.Query(q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -190,7 +190,7 @@ func TestArray(t *testing.T) {
 	}
 
 	q = "MATCH(n) return collect(n) as x"
-	res, err = graph.Query(q, nil, nil)
+	res, err = graphInstance.Query(q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -236,7 +236,7 @@ func TestMap(t *testing.T) {
 	createGraph()
 
 	q := "RETURN {val_1: 5, val_2: 'str', inner: {x: [1]}}"
-	res, err := graph.Query(q, nil, nil)
+	res, err := graphInstance.Query(q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -249,7 +249,7 @@ func TestMap(t *testing.T) {
 	assert.Equal(t, mapval, expected, "expecting a map literal")
 
 	q = "MATCH (a:Country) RETURN a { .name }"
-	res, err = graph.Query(q, nil, nil)
+	res, err = graphInstance.Query(q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -264,7 +264,7 @@ func TestMap(t *testing.T) {
 func TestPath(t *testing.T) {
 	createGraph()
 	q := "MATCH p = (:Person)-[:Visited]->(:Country) RETURN p"
-	res, err := graph.Query(q, nil, nil)
+	res, err := graphInstance.Query(q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -304,7 +304,7 @@ func TestPath(t *testing.T) {
 
 func TestPoint(t *testing.T) {
 	q := "RETURN point({latitude: 37.0, longitude: -122.0})"
-	res, err := graph.Query(q, nil, nil)
+	res, err := graphInstance.Query(q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -317,7 +317,7 @@ func TestPoint(t *testing.T) {
 
 func TestVectorF32(t *testing.T) {
 	q := "RETURN vecf32([1.0, 2.0, 3.0])"
-	res, err := graph.Query(q, nil, nil)
+	res, err := graphInstance.Query(q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -334,7 +334,7 @@ func TestParameterizedQuery(t *testing.T) {
 	params_map := make(map[string]interface{})
 	for index, param := range params {
 		params_map["param"] = param
-		res, err := graph.Query(q, params_map, nil)
+		res, err := graphInstance.Query(q, params_map, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -344,33 +344,33 @@ func TestParameterizedQuery(t *testing.T) {
 }
 
 func TestCreateIndex(t *testing.T) {
-	res, err := graph.Query("CREATE INDEX FOR (u:user) ON (u.name)", nil, nil)
+	res, err := graphInstance.Query("CREATE INDEX FOR (u:user) ON (u.name)", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Equal(t, 1, res.IndicesCreated(), "Expecting 1 index created")
 
-	_, err = graph.Query("CREATE INDEX FOR (u:user) ON (u.name)", nil, nil)
+	_, err = graphInstance.Query("CREATE INDEX FOR (u:user) ON (u.name)", nil, nil)
 	if err == nil {
 		t.Error("expecting error")
 	}
 
-	res, err = graph.Query("DROP INDEX FOR (u:user) ON (u.name)", nil, nil)
+	res, err = graphInstance.Query("DROP INDEX FOR (u:user) ON (u.name)", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
 	assert.Equal(t, 1, res.IndicesDeleted(), "Expecting 1 index deleted")
 
-	_, err = graph.Query("DROP INDEX FOR (u:user) ON (u.name)", nil, nil)
+	_, err = graphInstance.Query("DROP INDEX FOR (u:user) ON (u.name)", nil, nil)
 	assert.Equal(t, err.Error(), "ERR Unable to drop index on :user(name): no such index.")
 }
 
 func TestQueryStatistics(t *testing.T) {
-	err := graph.Delete()
+	err := graphInstance.Delete()
 	assert.Nil(t, err)
 
 	q := "CREATE (:Person{name:'a',age:32,array:[0,1,2]})"
-	res, err := graph.Query(q, nil, nil)
+	res, err := graphInstance.Query(q, nil, nil)
 	assert.Nil(t, err)
 
 	assert.Equal(t, 1, res.NodesCreated(), "Expecting 1 node created")
@@ -378,11 +378,11 @@ func TestQueryStatistics(t *testing.T) {
 	assert.Greater(t, res.InternalExecutionTime(), 0.0, "Expecting internal execution time not to be 0.0")
 	assert.Equal(t, true, res.Empty(), "Expecting empty resultset")
 
-	res, err = graph.Query("MATCH (n) DELETE n", nil, nil)
+	res, err = graphInstance.Query("MATCH (n) DELETE n", nil, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, res.NodesDeleted(), "Expecting 1 nodes deleted")
 
-	res, err = graph.Query("CREATE (:Person {name: 'John Doe', age: 33, gender: 'male', status: 'single'})-[:Visited {year: 2017}]->(c:Country {name: 'Japan', population: 126800000})", nil, nil)
+	res, err = graphInstance.Query("CREATE (:Person {name: 'John Doe', age: 33, gender: 'male', status: 'single'})-[:Visited {year: 2017}]->(c:Country {name: 'Japan', population: 126800000})", nil, nil)
 
 	assert.Nil(t, err)
 	assert.Equal(t, 2, res.NodesCreated(), "Expecting 2 node created")
@@ -393,11 +393,11 @@ func TestQueryStatistics(t *testing.T) {
 	assert.Greater(t, res.InternalExecutionTime(), 0.0, "Expecting internal execution time not to be 0.0")
 	assert.Equal(t, true, res.Empty(), "Expecting empty resultset")
 	q = "MATCH p = (:Person)-[:Visited]->(:Country) RETURN p"
-	res, err = graph.Query(q, nil, nil)
+	res, err = graphInstance.Query(q, nil, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, len(res.results), 1, "expecting 1 result record")
 	assert.Equal(t, false, res.Empty(), "Expecting resultset to have records")
-	res, err = graph.Query("MATCH ()-[r]-() DELETE r", nil, nil)
+	res, err = graphInstance.Query("MATCH ()-[r]-() DELETE r", nil, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, res.RelationshipsDeleted(), "Expecting 1 relationships deleted")
 }
@@ -430,15 +430,15 @@ func TestUtils(t *testing.T) {
 
 func TestMultiLabelNode(t *testing.T) {
 	// clear database
-	err := graph.Delete()
+	err := graphInstance.Delete()
 	assert.Nil(t, err)
 
 	// create a multi label node
-	_, err = graph.Query("CREATE (:A:B)", nil, nil)
+	_, err = graphInstance.Query("CREATE (:A:B)", nil, nil)
 	assert.Nil(t, err)
 
 	// fetch node
-	res, err := graph.Query("MATCH (n) RETURN n", nil, nil)
+	res, err := graphInstance.Query("MATCH (n) RETURN n", nil, nil)
 	assert.Nil(t, err)
 
 	res.Next()
@@ -452,11 +452,11 @@ func TestMultiLabelNode(t *testing.T) {
 }
 
 func TestNodeMapDatatype(t *testing.T) {
-	err := graph.Delete()
+	err := graphInstance.Delete()
 	assert.Nil(t, err)
 
 	// Create 2 nodes connect via a single edge.
-	res, err := graph.Query("CREATE (:Person {name: 'John Doe', age: 33, gender: 'male', status: 'single'})-[:Visited {year: 2017}]->(c:Country {name: 'Japan', population: 126800000, states: ['Kanto', 'Chugoku']})", nil, nil)
+	res, err := graphInstance.Query("CREATE (:Person {name: 'John Doe', age: 33, gender: 'male', status: 'single'})-[:Visited {year: 2017}]->(c:Country {name: 'Japan', population: 126800000, states: ['Kanto', 'Chugoku']})", nil, nil)
 
 	assert.Nil(t, err)
 	assert.Equal(t, 2, res.NodesCreated(), "Expecting 2 node created")
@@ -466,11 +466,11 @@ func TestNodeMapDatatype(t *testing.T) {
 	assert.Equal(t, 0, res.RelationshipsDeleted(), "Expecting 0 relationships deleted")
 	assert.Greater(t, res.InternalExecutionTime(), 0.0, "Expecting internal execution time not to be 0.0")
 	assert.Equal(t, true, res.Empty(), "Expecting empty resultset")
-	res, err = graph.Query("MATCH p = (:Person)-[:Visited]->(:Country) RETURN p", nil, nil)
+	res, err = graphInstance.Query("MATCH p = (:Person)-[:Visited]->(:Country) RETURN p", nil, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, len(res.results), 1, "expecting 1 result record")
 	assert.Equal(t, false, res.Empty(), "Expecting resultset to have records")
-	res, err = graph.Query("MATCH ()-[r]-() DELETE r", nil, nil)
+	res, err = graphInstance.Query("MATCH ()-[r]-() DELETE r", nil, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, res.RelationshipsDeleted(), "Expecting 1 relationships deleted")
 }
@@ -483,13 +483,13 @@ func TestTimeout(t *testing.T) {
 	assert.Equal(t, 1, options.GetTimeout())
 
 	// Issue a long-running query with a 1-millisecond timeout.
-	res, err := graph.Query("UNWIND range(0, 1000000) AS v WITH v WHERE v % 2 = 1 RETURN COUNT(v)", nil, options)
+	res, err := graphInstance.Query("UNWIND range(0, 1000000) AS v WITH v WHERE v % 2 = 1 RETURN COUNT(v)", nil, options)
 	assert.Nil(t, res)
 	assert.NotNil(t, err)
 
 	params := make(map[string]interface{})
 	params["ub"] = 1000000
-	res, err = graph.Query("UNWIND range(0, $ub) AS v RETURN v", params, options)
+	res, err = graphInstance.Query("UNWIND range(0, $ub) AS v RETURN v", params, options)
 	assert.Nil(t, res)
 	assert.NotNil(t, err)
 }

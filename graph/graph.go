@@ -1,6 +1,7 @@
-package falkordb
+package graph
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -8,6 +9,8 @@ import (
 
 	"github.com/snowmerak/falkordb-go/util/strs"
 )
+
+var ctx = context.Background()
 
 // QueryOptions are a set of additional arguments to be emitted with a query.
 type QueryOptions struct {
@@ -22,12 +25,17 @@ type Graph struct {
 }
 
 // New creates a new graph.
-func graphNew(Id string, conn redis.UniversalClient) *Graph {
+func New(Id string, conn redis.UniversalClient) *Graph {
 	g := new(Graph)
 	g.Id = Id
 	g.Conn = conn
 	g.schema = GraphSchemaNew(g)
 	return g
+}
+
+// NewGraphWithSchema creates a graph instance seeded with an existing schema (used in tests).
+func NewGraphWithSchema(schema GraphSchema) *Graph {
+	return &Graph{schema: schema}
 }
 
 // ExecutionPlan gets the execution plan for given query.
@@ -99,7 +107,7 @@ func (g *Graph) CallProcedure(procedure string, yield []string, args ...interfac
 
 	tmp := make([]string, 0, len(args))
 	for arg := range args {
-		tmp = append(tmp, ToString(arg))
+		tmp = append(tmp, strs.ToString(arg))
 	}
 	query += fmt.Sprintf("%s)", strings.Join(tmp, ","))
 

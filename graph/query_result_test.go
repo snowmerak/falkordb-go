@@ -1,4 +1,4 @@
-package falkordb
+package graph
 
 import (
 	"testing"
@@ -8,13 +8,11 @@ import (
 
 func TestQueryResultNew_EdgeCases(t *testing.T) {
 	// Setup a graph with a pre-populated schema for testing
-	g := &Graph{
-		schema: GraphSchema{
-			labels:        []string{"L0", "L1"},
-			relationships: []string{"R0", "R1"},
-			properties:    []string{"P0", "P1"},
-		},
-	}
+	g := NewGraphWithSchema(GraphSchemaWithData(
+		[]string{"L0", "L1"},
+		[]string{"R0", "R1"},
+		[]string{"P0", "P1"},
+	))
 
 	tests := []struct {
 		name        string
