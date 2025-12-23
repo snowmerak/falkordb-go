@@ -1,4 +1,4 @@
-package falkordb
+package domain
 
 import (
 	"fmt"
@@ -12,12 +12,11 @@ type Edge struct {
 	Source      *Node
 	Destination *Node
 	Properties  map[string]interface{}
-	srcNodeID   uint64
-	destNodeID  uint64
-	graph       *Graph
+	SrcNodeID   uint64
+	DestNodeID  uint64
 }
 
-// EdgeNew create a new Edge
+// EdgeNew creates a new Edge.
 func EdgeNew(relation string, srcNode *Node, destNode *Node, properties map[string]interface{}) *Edge {
 	p := properties
 	if p == nil {
@@ -29,40 +28,36 @@ func EdgeNew(relation string, srcNode *Node, destNode *Node, properties map[stri
 		Source:      srcNode,
 		Destination: destNode,
 		Properties:  p,
-		graph:       nil,
 	}
 }
 
-// SetProperty assign a new property to edge
+// SetProperty assigns a new property to edge.
 func (e *Edge) SetProperty(key string, value interface{}) {
 	e.Properties[key] = value
 }
 
-// GetProperty retrieves property from edge
+// GetProperty retrieves property from edge.
 func (e *Edge) GetProperty(key string) interface{} {
-	v := e.Properties[key]
-	return v
+	return e.Properties[key]
 }
 
-// SourceNodeID returns edge source node ID
-func (e Edge) SourceNodeID() uint64 {
+// SourceNodeID returns edge source node ID.
+func (e Edge) GetSourceNodeID() uint64 {
 	if e.Source != nil {
 		return e.Source.ID
-	} else {
-		return e.srcNodeID
 	}
+	return e.SrcNodeID
 }
 
-// DestNodeID returns edge destination node ID
-func (e Edge) DestNodeID() uint64 {
+// DestNodeID returns edge destination node ID.
+func (e Edge) GetDestNodeID() uint64 {
 	if e.Source != nil {
 		return e.Destination.ID
-	} else {
-		return e.destNodeID
 	}
+	return e.DestNodeID
 }
 
-// Returns a string representation of edge
+// String returns a string representation of edge.
 func (e Edge) String() string {
 	if len(e.Properties) == 0 {
 		return "{}"
@@ -70,14 +65,13 @@ func (e Edge) String() string {
 
 	p := make([]string, 0, len(e.Properties))
 	for k, v := range e.Properties {
-		p = append(p, fmt.Sprintf("%s:%v", k, ToString(v)))
+		p = append(p, fmt.Sprintf("%s:%v", k, toString(v)))
 	}
 
-	s := fmt.Sprintf("{%s}", strings.Join(p, ","))
-	return s
+	return fmt.Sprintf("{%s}", strings.Join(p, ","))
 }
 
-// Encode makes Edge satisfy the Stringer interface
+// Encode makes Edge satisfy the Stringer interface.
 func (e Edge) Encode() string {
 	s := []string{"(", e.Source.Alias, ")"}
 
@@ -90,7 +84,7 @@ func (e Edge) Encode() string {
 	if len(e.Properties) > 0 {
 		p := make([]string, 0, len(e.Properties))
 		for k, v := range e.Properties {
-			p = append(p, fmt.Sprintf("%s:%v", k, ToString(v)))
+			p = append(p, fmt.Sprintf("%s:%v", k, toString(v)))
 		}
 
 		s = append(s, "{")

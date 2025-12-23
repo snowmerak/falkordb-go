@@ -1,22 +1,20 @@
-package falkordb
+package domain
 
 import (
 	"fmt"
 	"strings"
 )
 
-// Node represents a node within a graph
+// Node represents a node within a graph.
 type Node struct {
 	ID         uint64
 	Labels     []string
 	Alias      string
 	Properties map[string]interface{}
-	graph      *Graph
 }
 
-// NodeNew create a new Node
+// NodeNew creates a new Node.
 func NodeNew(labels []string, alias string, properties map[string]interface{}) *Node {
-
 	p := properties
 	if p == nil {
 		p = make(map[string]interface{})
@@ -26,22 +24,20 @@ func NodeNew(labels []string, alias string, properties map[string]interface{}) *
 		Labels:     labels,
 		Alias:      alias,
 		Properties: p,
-		graph:      nil,
 	}
 }
 
-// SetProperty asssign a new property to node
+// SetProperty assigns a new property to node.
 func (n *Node) SetProperty(key string, value interface{}) {
 	n.Properties[key] = value
 }
 
-// GetProperty retrieves property from node
+// GetProperty retrieves property from node.
 func (n Node) GetProperty(key string) interface{} {
-	v := n.Properties[key]
-	return v
+	return n.Properties[key]
 }
 
-// Returns a string representation of a node
+// String returns a string representation of a node.
 func (n Node) String() string {
 	if len(n.Properties) == 0 {
 		return "{}"
@@ -49,14 +45,13 @@ func (n Node) String() string {
 
 	p := make([]string, 0, len(n.Properties))
 	for k, v := range n.Properties {
-		p = append(p, fmt.Sprintf("%s:%v", k, ToString(v)))
+		p = append(p, fmt.Sprintf("%s:%v", k, toString(v)))
 	}
 
-	s := fmt.Sprintf("{%s}", strings.Join(p, ","))
-	return s
+	return fmt.Sprintf("{%s}", strings.Join(p, ","))
 }
 
-// Encode makes Node satisfy the Stringer interface
+// Encode makes Node satisfy the Stringer interface.
 func (n Node) Encode() string {
 	s := []string{"("}
 
@@ -71,7 +66,7 @@ func (n Node) Encode() string {
 	if len(n.Properties) > 0 {
 		p := make([]string, 0, len(n.Properties))
 		for k, v := range n.Properties {
-			p = append(p, fmt.Sprintf("%s:%v", k, ToString(v)))
+			p = append(p, fmt.Sprintf("%s:%v", k, toString(v)))
 		}
 
 		s = append(s, "{")

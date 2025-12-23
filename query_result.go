@@ -363,8 +363,8 @@ func (qr *QueryResult) parseEdge(cell interface{}) (*Edge, error) {
 	e := EdgeNew(relation, nil, nil, properties)
 
 	e.ID = uint64(id)
-	e.srcNodeID = uint64(src_node_id)
-	e.destNodeID = uint64(dest_node_id)
+	e.SrcNodeID = uint64(src_node_id)
+	e.DestNodeID = uint64(dest_node_id)
 	return e, nil
 }
 

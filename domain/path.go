@@ -1,4 +1,4 @@
-package falkordb
+package domain
 
 import (
 	"fmt"
@@ -66,10 +66,10 @@ func (p Path) String() string {
 	s := []string{"<"}
 	edgeCount := p.EdgeCount()
 	for i := 0; i < edgeCount; i++ {
-		var node = p.GetNode(i)
+		node := p.GetNode(i)
 		s = append(s, "(", fmt.Sprintf("%v", node.ID), ")")
-		var edge = p.GetEdge(i)
-		if node.ID == edge.srcNodeID {
+		edge := p.GetEdge(i)
+		if node.ID == edge.SrcNodeID {
 			s = append(s, "-[", fmt.Sprintf("%v", edge.ID), "]->")
 		} else {
 			s = append(s, "<-[", fmt.Sprintf("%v", edge.ID), "]-")

@@ -1,4 +1,4 @@
-package falkordb
+package domain
 
 type Record struct {
 	values  []interface{}
@@ -6,7 +6,7 @@ type Record struct {
 	indices map[string]int
 }
 
-func recordNew(values []interface{}, keys []string) *Record {
+func NewRecord(values []interface{}, keys []string) *Record {
 	r := &Record{
 		values:  values,
 		keys:    keys,
@@ -46,7 +46,6 @@ func (r *Record) Get(key string) (interface{}, bool) {
 func (r *Record) GetByIndex(index int) interface{} {
 	if index < len(r.values) {
 		return r.values[index]
-	} else {
-		return nil
 	}
+	return nil
 }
