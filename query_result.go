@@ -87,7 +87,11 @@ func QueryResultNew(g *Graph, response interface{}) (*QueryResult, error) {
 	}
 
 	if len(r) == 1 {
-		if err := qr.parseStatistics(r[0]); err != nil {
+		stats, ok := r[0].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("statistics payload is not array: %T", r[0])
+		}
+		if err := qr.parseStatistics(stats); err != nil {
 			return nil, err
 		}
 		return qr, nil
