@@ -89,6 +89,21 @@ opts := graph.NewQueryOptions().SetTimeout(5)
 res, err := g.Query("UNWIND range(0, 1000000) AS v RETURN v", nil, opts)
 ```
 
+- Read-only client
+
+```go
+db, err := falkordb.NewReadOnly(&falkordb.ConnectionOption{Addr: "0.0.0.0:6379"})
+if err != nil { log.Fatal(err) }
+
+g := db.SelectGraph("social")
+
+// This will error because the graph is read-only
+_, err = g.Query("CREATE (:X)", nil, nil)
+
+// RO queries are allowed
+res, err := g.ROQuery("MATCH (n) RETURN n", nil, nil)
+```
+
 - Pipelined batch queries
 
 ```go
