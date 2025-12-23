@@ -106,8 +106,8 @@ res, err := g.Query("MATCH (src {name: 'John Doe'})-[*]->(dest) RETURN dest", ni
 - Environment defaults used in tests: `FALKORDB_ADDR` for host:port, `FALKORDB_TEST_MODE=cluster` to switch client mode.
 
 ## Examples
-- Start a standalone server: `docker compose -f docker-compose.standalone.yml up -d`
-- Start a clustered server: `docker compose -f docker-compose.cluster.yml up -d`
+- Start a standalone server: `docker compose -f docker-compose.standalone.yml up -d` or `task standalone:up`
+- Start a clustered server: `docker compose -f docker-compose.cluster.yml up -d` or `task cluster:down`
 
 ## Running tests
 
