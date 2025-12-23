@@ -29,8 +29,8 @@ func isSentinel(conn redis.UniversalClient) bool {
 	return false
 }
 
-// FalkorDB Class for interacting with a FalkorDB server.
-func FalkorDBNew(options *ConnectionOption) (*FalkorDB, error) {
+// New creates a new FalkorDB instance.
+func New(options *ConnectionOption) (*FalkorDB, error) {
 	db := redis.NewClient(options)
 
 	if isSentinel(db) {
@@ -77,55 +77,32 @@ func FalkorDBNew(options *ConnectionOption) (*FalkorDB, error) {
 	return &FalkorDB{Conn: db}, nil
 }
 
-// FalkorDBNewCluster creates a new FalkorDB cluster instance.
-func FalkorDBNewCluster(options *ConnectionClusterOption) (*FalkorDB, error) {
+// NewCluster creates a new FalkorDB cluster instance.
+func NewCluster(options *ConnectionClusterOption) (*FalkorDB, error) {
 	db := redis.NewClusterClient(options)
 	return &FalkorDB{Conn: db}, nil
 }
 
 // Creates a new FalkorDB instance from a URL.
 func FromURL(url string) (*FalkorDB, error) {
-	if strings.HasPrefix(url, "falkor://") {
-		url = "redis://" + url[len("falkor://"):]
-	} else if strings.HasPrefix(url, "falkors://") {
-		url = "rediss://" + url[len("falkors://"):]
-	}
+	url = strings.ReplaceAll(url, "falkors://", "rediss://")
+	url = strings.ReplaceAll(url, "falkor://", "redis://")
 
 	options, err := redis.ParseURL(url)
 	if err != nil {
 		return nil, err
 	}
-	db := redis.NewClient(options)
-	if isSentinel(db) {
-		mastersRaw, err := db.Do(ctx, "SENTINEL", "MASTERS").Result()
-		if err != nil {
-			return nil, err
-		}
-		masters, ok := mastersRaw.([]interface{})
-		if !ok {
-			return nil, fmt.Errorf("unexpected sentinel masters type %T", mastersRaw)
-		}
-		if len(masters) != 1 {
-			return nil, errors.New("multiple masters, require service name")
-		}
-		m0, ok := masters[0].(map[string]interface{})
-		if !ok {
-			return nil, errors.New("sentinel master entry malformed")
-		}
-		nameRaw, ok := m0["name"]
-		if !ok {
-			return nil, errors.New("sentinel master missing name")
-		}
-		masterName, ok := nameRaw.(string)
-		if !ok {
-			return nil, errors.New("sentinel master name not string")
-		}
-		db = redis.NewFailoverClient(&redis.FailoverOptions{
-			MasterName:    masterName,
-			SentinelAddrs: []string{options.Addr},
-		})
+
+	return New(options)
+}
+
+func FromClusterURL(urls string) (*FalkorDB, error) {
+	options, err := redis.ParseClusterURL(urls)
+	if err != nil {
+		return nil, err
 	}
-	return &FalkorDB{Conn: db}, nil
+
+	return NewCluster(options)
 }
 
 // Selects a graph by creating a new Graph instance.

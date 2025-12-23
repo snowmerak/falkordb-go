@@ -20,7 +20,7 @@ func createGraph() {
 	var err error
 
 	if os.Getenv("FALKORDB_TEST_MODE") == "cluster" {
-		db, err = falkordb.FalkorDBNewCluster(&falkordb.ConnectionClusterOption{
+		db, err = falkordb.NewCluster(&falkordb.ConnectionClusterOption{
 			Addrs: []string{addr},
 		})
 	} else {

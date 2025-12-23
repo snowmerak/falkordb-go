@@ -68,7 +68,7 @@ func main() {
 	// This should be used only for testing.
 	clientTLSConfig.InsecureSkipVerify = true
 
-	db, _ := falkordb.FalkorDBNew(&falkordb.ConnectionOption{
+	db, _ := falkordb.New(&falkordb.ConnectionOption{
 		Addr:      *host,
 		Password:  *password,
 		TLSConfig: clientTLSConfig,
