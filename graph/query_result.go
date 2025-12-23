@@ -65,6 +65,21 @@ type QueryResult struct {
 	currentRecordIdx int
 }
 
+// Graph returns the graph associated with this result set.
+func (qr *QueryResult) Graph() *Graph { return qr.graph }
+
+// Header returns the parsed result header metadata.
+func (qr *QueryResult) Header() QueryResultHeader { return qr.header }
+
+// Results returns the raw records slice.
+func (qr *QueryResult) Results() []*Record { return qr.results }
+
+// Statistics returns query execution statistics.
+func (qr *QueryResult) Statistics() map[string]float64 { return qr.statistics }
+
+// CurrentRecordIndex returns the current cursor position, or -1 if iteration has not started.
+func (qr *QueryResult) CurrentRecordIndex() int { return qr.currentRecordIdx }
+
 func QueryResultNew(g *Graph, response interface{}) (*QueryResult, error) {
 	qr := &QueryResult{
 		results:    nil,
