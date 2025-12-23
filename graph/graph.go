@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	graphQueryCmd   = "GRAPH.QUERY"
-	graphROQueryCmd = "GRAPH.RO_QUERY"
+	CmdQuery   = "GRAPH.QUERY"
+	CmdROQuery = "GRAPH.RO_QUERY"
 )
 
 var ctx = context.Background()
@@ -126,7 +126,7 @@ func (g *Graph) Pipeline(reqs []QueryRequest) ([]*QueryResult, error) {
 
 		command := req.Command
 		if command == "" {
-			command = graphQueryCmd
+			command = CmdQuery
 		}
 
 		cmdArgs := append([]interface{}{command}, args...)
@@ -155,12 +155,12 @@ func (g *Graph) Pipeline(reqs []QueryRequest) ([]*QueryResult, error) {
 
 // Query executes a query against the graph.
 func (g *Graph) Query(query string, params map[string]interface{}, options *QueryOptions) (*QueryResult, error) {
-	return g.query(graphQueryCmd, query, params, options)
+	return g.query(CmdQuery, query, params, options)
 }
 
 // ROQuery executes a read only query against the graph.
 func (g *Graph) ROQuery(query string, params map[string]interface{}, options *QueryOptions) (*QueryResult, error) {
-	return g.query(graphROQueryCmd, query, params, options)
+	return g.query(CmdROQuery, query, params, options)
 }
 
 // Procedures
