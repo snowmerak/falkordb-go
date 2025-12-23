@@ -13,12 +13,11 @@ func TestPipelineQueries(t *testing.T) {
 
 	reqs := []graph.QueryRequest{
 		{
-			Command: "",
 			Query:   "MATCH (p:Person) RETURN p",
 			Options: graph.NewQueryOptions().SetTimeout(50),
 		},
 		{
-			Command: graph.CmdQuery,
+			Command: graph.CmdROQuery,
 			Query:   "MATCH (c:Country {name:$name}) RETURN c",
 			Params:  map[string]interface{}{"name": "Japan"},
 		},
