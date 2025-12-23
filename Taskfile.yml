@@ -3,6 +3,11 @@
 version: '3'
 
 tasks:
+  get:
+    desc: "Fetch Go dependencies"
+    cmds:
+      - go get -t -v ./...
+
   cluster:up:
     desc: "Start FalkorDB cluster"
     cmds:
@@ -23,17 +28,19 @@ tasks:
   test:standalone:
     desc: "Run tests against standalone FalkorDB"
     cmds:
+      - task: get
       - task: standalone:up
       - defer: task standalone:down
-      - FALKORDB_ADDR=0.0.0.0:6379 FALKORDB_TEST_MODE=standalone go test -v ./...
+      - FALKORDB_ADDR=0.0.0.0:6379 FALKORDB_TEST_MODE=standalone go test -v -race ./...
       
   test:cluster:
     desc: "Run tests against FalkorDB cluster"
     cmds:
+      - task: get
       - task: cluster:up
       - defer: task cluster:down
       - go run ./sleep
-      - FALKORDB_ADDR=0.0.0.0:9379 FALKORDB_TEST_MODE=cluster go test -v ./...
+      - FALKORDB_ADDR=0.0.0.0:9379 FALKORDB_TEST_MODE=cluster go test -v -race ./...
 
   test:
     desc: "Run all tests"
