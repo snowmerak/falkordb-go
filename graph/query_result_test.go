@@ -3,6 +3,7 @@ package graph
 import (
 	"testing"
 
+	"github.com/snowmerak/falkordb-go/domain"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -154,16 +155,16 @@ func TestQueryResultNew_EdgeCases(t *testing.T) {
 
 func TestPathNew_Safety(t *testing.T) {
 	// Test with invalid inputs to ensure no panics
-	p := PathNew([]interface{}{"not a node"}, []interface{}{})
+	p := domain.PathNew([]interface{}{"not a node"}, []interface{}{})
 	assert.Empty(t, p.Nodes)
 	assert.Empty(t, p.Edges)
 
-	p = PathNew([]interface{}{}, []interface{}{"not an edge"})
+	p = domain.PathNew([]interface{}{}, []interface{}{"not an edge"})
 	assert.Empty(t, p.Nodes)
 	assert.Empty(t, p.Edges)
 
 	// Valid empty path
-	p = PathNew([]interface{}{}, []interface{}{})
+	p = domain.PathNew([]interface{}{}, []interface{}{})
 	assert.NotNil(t, p.Nodes)
 	assert.NotNil(t, p.Edges)
 	assert.Equal(t, 0, len(p.Nodes))

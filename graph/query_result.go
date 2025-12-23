@@ -9,6 +9,7 @@ import (
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/olekukonko/tablewriter/tw"
+	"github.com/snowmerak/falkordb-go/domain"
 )
 
 const (
@@ -60,7 +61,7 @@ type QueryResultHeader struct {
 type QueryResult struct {
 	graph            *Graph
 	header           QueryResultHeader
-	results          []*Record
+	results          []*domain.Record
 	statistics       map[string]float64
 	currentRecordIdx int
 }
@@ -72,7 +73,7 @@ func (qr *QueryResult) Graph() *Graph { return qr.graph }
 func (qr *QueryResult) Header() QueryResultHeader { return qr.header }
 
 // Results returns the raw records slice.
-func (qr *QueryResult) Results() []*Record { return qr.results }
+func (qr *QueryResult) Results() []*domain.Record { return qr.results }
 
 // Statistics returns query execution statistics.
 func (qr *QueryResult) Statistics() map[string]float64 { return qr.statistics }
@@ -218,7 +219,7 @@ func (qr *QueryResult) parseRecords(raw_result_set []interface{}) error {
 		return errors.New("header metadata not initialized")
 	}
 
-	qr.results = make([]*Record, len(records))
+	qr.results = make([]*domain.Record, len(records))
 
 	for i, r := range records {
 		cells, ok := r.([]interface{})
@@ -260,7 +261,7 @@ func (qr *QueryResult) parseRecords(raw_result_set []interface{}) error {
 				return errors.New("unknown column type")
 			}
 		}
-		qr.results[i] = recordNew(values, qr.header.column_names)
+		qr.results[i] = domain.NewRecord(values, qr.header.column_names)
 	}
 	return nil
 }
@@ -291,7 +292,7 @@ func (qr *QueryResult) parseProperties(props []interface{}) (map[string]interfac
 	return properties, nil
 }
 
-func (qr *QueryResult) parseNode(cell interface{}) (*Node, error) {
+func (qr *QueryResult) parseNode(cell interface{}) (*domain.Node, error) {
 	// Node ID (integer),
 	// [label string offset (integer)],
 	// [[name, value type, value] X N]
@@ -330,12 +331,12 @@ func (qr *QueryResult) parseNode(cell interface{}) (*Node, error) {
 		return nil, err
 	}
 
-	n := NodeNew(labels, "", properties)
+	n := domain.NodeNew(labels, "", properties)
 	n.ID = uint64(id)
 	return n, nil
 }
 
-func (qr *QueryResult) parseEdge(cell interface{}) (*Edge, error) {
+func (qr *QueryResult) parseEdge(cell interface{}) (*domain.Edge, error) {
 	// Edge ID (integer),
 	// reltype string offset (integer),
 	// src node ID offset (integer),
@@ -375,7 +376,7 @@ func (qr *QueryResult) parseEdge(cell interface{}) (*Edge, error) {
 	if err != nil {
 		return nil, err
 	}
-	e := EdgeNew(relation, nil, nil, properties)
+	e := domain.EdgeNew(relation, nil, nil, properties)
 
 	e.ID = uint64(id)
 	e.SrcNodeID = uint64(src_node_id)
@@ -403,48 +404,48 @@ func (qr *QueryResult) parseArray(cell interface{}) ([]interface{}, error) {
 	return array, nil
 }
 
-func (qr *QueryResult) parsePath(cell interface{}) (Path, error) {
+func (qr *QueryResult) parsePath(cell interface{}) (domain.Path, error) {
 	arrays, ok := cell.([]interface{})
 	if !ok || len(arrays) < 2 {
-		return Path{}, errors.New("path payload invalid")
+		return domain.Path{}, errors.New("path payload invalid")
 	}
 	nodesRaw, ok := arrays[0].([]interface{})
 	if !ok {
-		return Path{}, errors.New("path nodes payload invalid")
+		return domain.Path{}, errors.New("path nodes payload invalid")
 	}
 	edgesRaw, ok := arrays[1].([]interface{})
 	if !ok {
-		return Path{}, errors.New("path edges payload invalid")
+		return domain.Path{}, errors.New("path edges payload invalid")
 	}
 	nodesVal, err := qr.parseScalar(nodesRaw)
 	if err != nil {
-		return Path{}, err
+		return domain.Path{}, err
 	}
 	edgesVal, err := qr.parseScalar(edgesRaw)
 	if err != nil {
-		return Path{}, err
+		return domain.Path{}, err
 	}
 	nodesSlice, ok := nodesVal.([]interface{})
 	if !ok {
-		return Path{}, errors.New("parsed path nodes not array")
+		return domain.Path{}, errors.New("parsed path nodes not array")
 	}
 	edgesSlice, ok := edgesVal.([]interface{})
 	if !ok {
-		return Path{}, errors.New("parsed path edges not array")
+		return domain.Path{}, errors.New("parsed path edges not array")
 	}
 
-	path := Path{Nodes: make([]*Node, len(nodesSlice)), Edges: make([]*Edge, len(edgesSlice))}
+	path := domain.Path{Nodes: make([]*domain.Node, len(nodesSlice)), Edges: make([]*domain.Edge, len(edgesSlice))}
 	for i := range nodesSlice {
-		n, ok := nodesSlice[i].(*Node)
+		n, ok := nodesSlice[i].(*domain.Node)
 		if !ok {
-			return Path{}, errors.New("path node element not *Node")
+			return domain.Path{}, errors.New("path node element not *Node")
 		}
 		path.Nodes[i] = n
 	}
 	for i := range edgesSlice {
-		e, ok := edgesSlice[i].(*Edge)
+		e, ok := edgesSlice[i].(*domain.Edge)
 		if !ok {
-			return Path{}, errors.New("path edge element not *Edge")
+			return domain.Path{}, errors.New("path edge element not *Edge")
 		}
 		path.Edges[i] = e
 	}
@@ -618,7 +619,7 @@ func (qr *QueryResult) Next() bool {
 }
 
 // Record returns the current record.
-func (qr *QueryResult) Record() *Record {
+func (qr *QueryResult) Record() *domain.Record {
 	if qr.currentRecordIdx >= 0 && qr.currentRecordIdx < len(qr.results) {
 		return qr.results[qr.currentRecordIdx]
 	} else {
