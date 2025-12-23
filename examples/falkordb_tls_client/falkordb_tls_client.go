@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/snowmerak/falkordb-go"
+	"github.com/snowmerak/falkordb-go/domain"
 )
 
 var (
@@ -80,7 +81,7 @@ func main() {
 
 	res.Next()
 	r := res.Record()
-	w := r.GetByIndex(0).(*falkordb.Node)
+	w := r.GetByIndex(0).(*domain.Node)
 	fmt.Println(w.Labels[0])
 	// Output: WorkPlace
 }

@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/snowmerak/falkordb-go/domain"
 	"github.com/snowmerak/falkordb-go/graph"
 	"github.com/stretchr/testify/assert"
 )
@@ -82,11 +83,11 @@ func checkQueryResults(t *testing.T, res *graph.QueryResult) {
 	res.Next()
 	r := res.Record()
 
-	s, ok := r.GetByIndex(0).(*Node)
+	s, ok := r.GetByIndex(0).(*domain.Node)
 	assert.True(t, ok, "First column should contain nodes.")
-	e, ok := r.GetByIndex(1).(*Edge)
+	e, ok := r.GetByIndex(1).(*domain.Edge)
 	assert.True(t, ok, "Second column should contain edges.")
-	d, ok := r.GetByIndex(2).(*Node)
+	d, ok := r.GetByIndex(2).(*domain.Node)
 	assert.True(t, ok, "Third column should contain nodes.")
 
 	assert.Equal(t, s.Labels[0], "Person", "Node should be of type 'Person'")
@@ -128,7 +129,7 @@ func TestCreateQuery(t *testing.T) {
 	assert.False(t, res.Empty(), "Expecting resultset to include a single node.")
 	res.Next()
 	r := res.Record()
-	w := r.GetByIndex(0).(*Node)
+	w := r.GetByIndex(0).(*domain.Node)
 	assert.Equal(t, w.Labels[0], "WorkPlace", "Unexpected node label.")
 }
 
@@ -196,8 +197,8 @@ func TestArray(t *testing.T) {
 		t.Error(err)
 	}
 
-	a := NodeNew([]string{"person"}, "", nil)
-	b := NodeNew([]string{"person"}, "", nil)
+	a := domain.NodeNew([]string{"person"}, "", nil)
+	b := domain.NodeNew([]string{"person"}, "", nil)
 
 	a.SetProperty("name", "a")
 	a.SetProperty("age", int64(32))
@@ -215,13 +216,13 @@ func TestArray(t *testing.T) {
 
 	assert.Equal(t, 2, len(arr))
 
-	resA := arr[0].(*Node)
-	resB := arr[1].(*Node)
+	resA := arr[0].(*domain.Node)
+	resB := arr[1].(*domain.Node)
 	// the order of values in the array returned by collect operation is not defined
 	// check for the node that contains the name "a" and set it to be resA
 	if resA.GetProperty("name") != "a" {
-		resA = arr[1].(*Node)
-		resB = arr[0].(*Node)
+		resA = arr[1].(*domain.Node)
+		resB = arr[0].(*domain.Node)
 	}
 
 	assert.Equal(t, a.GetProperty("name"), resA.GetProperty("name"), "Unexpected property value.")
@@ -275,7 +276,7 @@ func TestPath(t *testing.T) {
 	res.Next()
 	r := res.Record()
 
-	p, ok := r.GetByIndex(0).(Path)
+	p, ok := r.GetByIndex(0).(domain.Path)
 	assert.True(t, ok, "First column should contain path.")
 
 	assert.Equal(t, 2, p.NodesCount(), "Path should contain two nodes")
@@ -444,7 +445,7 @@ func TestMultiLabelNode(t *testing.T) {
 
 	res.Next()
 	r := res.Record()
-	n := r.GetByIndex(0).(*Node)
+	n := r.GetByIndex(0).(*domain.Node)
 
 	// expecting 2 labels
 	assert.Equal(t, len(n.Labels), 2, "expecting 2 labels")
