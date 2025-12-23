@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/redis/go-redis/v9"
+
+	"github.com/snowmerak/falkordb-go/util/strs"
 )
 
 // QueryOptions are a set of additional arguments to be emitted with a query.
@@ -106,4 +108,13 @@ func (g *Graph) CallProcedure(procedure string, yield []string, args ...interfac
 	}
 
 	return g.Query(query, nil, nil)
+}
+
+// BuildParamsHeader builds a CYPHER params header from key/value pairs.
+func BuildParamsHeader(params map[string]interface{}) string {
+	header := "CYPHER "
+	for key, value := range params {
+		header += fmt.Sprintf("%s=%v ", key, strs.ToString(value))
+	}
+	return header
 }
