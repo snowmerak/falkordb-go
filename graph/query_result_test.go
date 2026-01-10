@@ -2,10 +2,16 @@ package graph
 
 import (
 	"testing"
+	"time"
 
 	"github.com/snowmerak/falkordb-go/domain"
 	"github.com/stretchr/testify/assert"
 )
+
+// Helper to wrap scalar cell
+func makeCell(typ ResultSetScalarTypes, val interface{}) []interface{} {
+	return []interface{}{int64(typ), val}
+}
 
 func TestQueryResultNew_EdgeCases(t *testing.T) {
 	// Setup a graph with a pre-populated schema for testing
@@ -174,11 +180,6 @@ func TestNewPath_Safety(t *testing.T) {
 func TestParseScalar_EdgeCases(t *testing.T) {
 	qr := &QueryResult{}
 
-	// Helper to wrap scalar cell
-	makeCell := func(typ ResultSetScalarTypes, val interface{}) []interface{} {
-		return []interface{}{int64(typ), val}
-	}
-
 	tests := []struct {
 		name        string
 		cell        []interface{}
@@ -239,6 +240,82 @@ func TestParseScalar_EdgeCases(t *testing.T) {
 				}
 			} else {
 				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestParseDateTypes(t *testing.T) {
+	qr := &QueryResult{}
+
+	tests := []struct {
+		name        string
+		cell        []interface{}
+		wantType    string // Check specific types
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:     "Date Success",
+			cell:     makeCell(VALUE_DATE, int64(1672531200)),
+			wantType: "time.Time",
+		},
+		{
+			name:        "Date Invalid Type",
+			cell:        makeCell(VALUE_DATE, "not-int"),
+			wantErr:     true,
+			errContains: "date scalar not int64",
+		},
+		{
+			name:     "LocalDateTime Success",
+			cell:     makeCell(VALUE_LOCALDATETIME, int64(1672574400)),
+			wantType: "time.Time",
+		},
+		{
+			name:        "LocalDateTime Invalid Type",
+			cell:        makeCell(VALUE_LOCALDATETIME, "not-int"),
+			wantErr:     true,
+			errContains: "localdatetime scalar not int64",
+		},
+		{
+			name:     "LocalTime Success",
+			cell:     makeCell(VALUE_LOCALTIME, int64(1000)),
+			wantType: "time.Time",
+		},
+		{
+			name:        "LocalTime Invalid Type",
+			cell:        makeCell(VALUE_LOCALTIME, "not-int"),
+			wantErr:     true,
+			errContains: "localtime scalar not int64",
+		},
+		{
+			name:     "Duration Success",
+			cell:     makeCell(VALUE_DURATION, int64(3600)),
+			wantType: "time.Duration",
+		},
+		{
+			name:        "Duration Invalid Type",
+			cell:        makeCell(VALUE_DURATION, "not-int"),
+			wantErr:     true,
+			errContains: "duration scalar not int64",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := qr.parseScalar(tt.cell)
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errContains != "" {
+					assert.Contains(t, err.Error(), tt.errContains)
+				}
+			} else {
+				assert.NoError(t, err)
+				if tt.wantType == "time.Time" {
+					assert.IsType(t, time.Time{}, got)
+				} else if tt.wantType == "time.Duration" {
+					assert.IsType(t, time.Duration(0), got)
+				}
 			}
 		})
 	}
