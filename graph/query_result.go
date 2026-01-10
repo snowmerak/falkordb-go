@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/olekukonko/tablewriter/tw"
@@ -50,6 +51,10 @@ const (
 	VALUE_MAP
 	VALUE_POINT
 	VALUE_VECTORF32
+	VALUE_LOCALDATETIME
+	VALUE_DATE
+	VALUE_LOCALTIME
+	VALUE_DURATION
 )
 
 type QueryResultHeader struct {
@@ -589,6 +594,34 @@ func (qr *QueryResult) parseScalar(cell []interface{}) (interface{}, error) {
 
 	case VALUE_VECTORF32:
 		return qr.parseVectorF32(v)
+
+	case VALUE_LOCALDATETIME:
+		i, ok := v.(int64)
+		if !ok {
+			return nil, errors.New("localdatetime scalar not int64")
+		}
+		return time.Unix(i, 0), nil
+
+	case VALUE_DATE:
+		i, ok := v.(int64)
+		if !ok {
+			return nil, errors.New("date scalar not int64")
+		}
+		return time.Unix(i, 0), nil
+
+	case VALUE_LOCALTIME:
+		i, ok := v.(int64)
+		if !ok {
+			return nil, errors.New("localtime scalar not int64")
+		}
+		return time.Unix(i, 0), nil
+
+	case VALUE_DURATION:
+		i, ok := v.(int64)
+		if !ok {
+			return nil, errors.New("duration scalar not int64")
+		}
+		return time.Duration(i) * time.Second, nil
 
 	case VALUE_UNKNOWN:
 		return nil, errors.New("unknown scalar type")
