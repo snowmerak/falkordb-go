@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/redis/go-redis/v9"
@@ -157,4 +158,23 @@ func (db *FalkorDB) ConfigGet(key string) (interface{}, error) {
 // For a list of available configurations see: https://docs.falkordb.com/configuration.html#falkordb-configuration-parameters
 func (db *FalkorDB) ConfigSet(key string, value interface{}) error {
 	return db.Conn.Do(ctx, "GRAPH.CONFIG", "SET", key, value).Err()
+}
+
+// LoadUDF loads a user defined function library.
+func (db *FalkorDB) LoadUDF(libraryName, code string) error {
+	return db.Conn.Do(ctx, "GRAPH.UDF", "LOAD", libraryName, code).Err()
+}
+
+// LoadUDFFromFile loads a user defined function library from a file.
+func (db *FalkorDB) LoadUDFFromFile(libraryName, filePath string) error {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+	return db.LoadUDF(libraryName, string(content))
+}
+
+// IsUdfAlreadyRegisteredError checks if the error is due to the UDF library already being registered.
+func IsUdfAlreadyRegisteredError(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "already registered")
 }
