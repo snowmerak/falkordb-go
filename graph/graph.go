@@ -217,6 +217,52 @@ func (g *Graph) ROQuery(query string, params map[string]interface{}, options *Qu
 
 // Procedures
 
+// MemoryUsage returns detailed memory consumption statistics for a specific graph.
+// samples: Number of samples to take when estimating memory usage. (default 100 if -1)
+func (g *Graph) MemoryUsage(samples int) (map[string]interface{}, error) {
+	args := []interface{}{"GRAPH.MEMORY", "USAGE", g.Id}
+	if samples > 0 {
+		args = append(args, "SAMPLES", samples)
+	}
+
+	res, err := g.Conn.Do(ctx, args...).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	// Try parsing as array
+	if rawArray, ok := res.([]interface{}); ok {
+		// Response is array of key-value pairs
+		// [key1, value1, key2, value2, ...]
+		memoryInfo := make(map[string]interface{})
+		for i := 0; i < len(rawArray); i += 2 {
+			key, ok := rawArray[i].(string)
+			if !ok {
+				return nil, fmt.Errorf("memory info key at index %d is not string", i)
+			}
+
+			val := rawArray[i+1]
+			memoryInfo[key] = val
+		}
+		return memoryInfo, nil
+	}
+
+	// Try parsing as map (some go-redis client versions might parse it automatically or if the command returns a map)
+	if rawMap, ok := res.(map[interface{}]interface{}); ok {
+		memoryInfo := make(map[string]interface{})
+		for k, v := range rawMap {
+			keyStr, ok := k.(string)
+			if !ok {
+				continue // Or handle error
+			}
+			memoryInfo[keyStr] = v
+		}
+		return memoryInfo, nil
+	}
+
+	return nil, fmt.Errorf("unexpected memory response type %T", res)
+}
+
 // CallProcedure invokes procedure.
 func (g *Graph) CallProcedure(procedure string, yield []string, args ...interface{}) (*QueryResult, error) {
 	query := fmt.Sprintf("CALL %s(", procedure)
