@@ -14,6 +14,7 @@ import (
 const (
 	CmdQuery   = "GRAPH.QUERY"
 	CmdROQuery = "GRAPH.RO_QUERY"
+	CmdProfile = "GRAPH.PROFILE"
 )
 
 var ctx = context.Background()
@@ -62,6 +63,43 @@ func NewGraphWithSchema(schema GraphSchema) *Graph {
 // ExecutionPlan gets the execution plan for given query.
 func (g *Graph) ExecutionPlan(query string) (string, error) {
 	return g.Conn.Do(ctx, "GRAPH.EXPLAIN", g.Id, query).Text()
+}
+
+// Profile executes a query and returns an execution plan augmented with metrics.
+func (g *Graph) Profile(query string, params map[string]interface{}, options *QueryOptions) ([]string, error) {
+	if params != nil {
+		query = BuildParamsHeader(params) + query
+	}
+
+	args := []interface{}{g.Id, query, "--compact"}
+	if options != nil && options.timeout >= 0 {
+		args = append(args, "timeout", options.timeout)
+	}
+
+	cmdArgs := append([]interface{}{CmdProfile}, args...)
+	res, err := g.Conn.Do(ctx, cmdArgs...).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	return parseProfileResponse(res)
+}
+
+func parseProfileResponse(res interface{}) ([]string, error) {
+	raw, ok := res.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unexpected profile response type %T", res)
+	}
+
+	lines := make([]string, len(raw))
+	for i, r := range raw {
+		s, ok := r.(string)
+		if !ok {
+			return nil, fmt.Errorf("profile entry %d not string", i)
+		}
+		lines[i] = strings.TrimSpace(s)
+	}
+	return lines, nil
 }
 
 // Delete removes the graph.
