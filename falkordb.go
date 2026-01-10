@@ -136,6 +136,11 @@ func (db *FalkorDB) SelectGraph(graphName string) *graph.Graph {
 	return graph.NewWithMode(graphName, db.Conn, db.readonly)
 }
 
+// CopyGraph copies a graph to a new key.
+func (db *FalkorDB) CopyGraph(src, dest string) error {
+	return db.Conn.Do(ctx, "GRAPH.COPY", src, dest).Err()
+}
+
 // List all graph names.
 // See: https://docs.falkordb.com/commands/graph.list.html
 func (db *FalkorDB) ListGraphs() ([]string, error) {
