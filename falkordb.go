@@ -160,14 +160,24 @@ func (db *FalkorDB) ConfigSet(key string, value interface{}) error {
 	return db.Conn.Do(ctx, "GRAPH.CONFIG", "SET", key, value).Err()
 }
 
+// runOnAllMasters executes a command on all master nodes if connected to a cluster.
+func (db *FalkorDB) runOnAllMasters(args ...interface{}) error {
+	if cc, ok := db.Conn.(*redis.ClusterClient); ok {
+		return cc.ForEachMaster(ctx, func(ctx context.Context, client *redis.Client) error {
+			return client.Do(ctx, args...).Err()
+		})
+	}
+	return db.Conn.Do(ctx, args...).Err()
+}
+
 // LoadUDF loads a user defined function library.
 func (db *FalkorDB) LoadUDF(libraryName, code string) error {
-	return db.Conn.Do(ctx, "GRAPH.UDF", "LOAD", libraryName, code).Err()
+	return db.runOnAllMasters("GRAPH.UDF", "LOAD", libraryName, code)
 }
 
 // LoadUDFReplace loads a user defined function library, replacing it if it already exists.
 func (db *FalkorDB) LoadUDFReplace(libraryName, code string) error {
-	return db.Conn.Do(ctx, "GRAPH.UDF", "LOAD", "REPLACE", libraryName, code).Err()
+	return db.runOnAllMasters("GRAPH.UDF", "LOAD", "REPLACE", libraryName, code)
 }
 
 // LoadUDFFromFile loads a user defined function library from a file.
@@ -282,10 +292,10 @@ func (db *FalkorDB) ListUDF(opts ...UDFListOption) ([]UDFLibrary, error) {
 
 // DeleteUDF removes a user defined function library.
 func (db *FalkorDB) DeleteUDF(libraryName string) error {
-	return db.Conn.Do(ctx, "GRAPH.UDF", "DELETE", libraryName).Err()
+	return db.runOnAllMasters("GRAPH.UDF", "DELETE", libraryName)
 }
 
 // FlushUDFs removes all user defined function libraries.
 func (db *FalkorDB) FlushUDFs() error {
-	return db.Conn.Do(ctx, "GRAPH.UDF", "FLUSH").Err()
+	return db.runOnAllMasters("GRAPH.UDF", "FLUSH")
 }
