@@ -165,6 +165,11 @@ func (db *FalkorDB) LoadUDF(libraryName, code string) error {
 	return db.Conn.Do(ctx, "GRAPH.UDF", "LOAD", libraryName, code).Err()
 }
 
+// LoadUDFReplace loads a user defined function library, replacing it if it already exists.
+func (db *FalkorDB) LoadUDFReplace(libraryName, code string) error {
+	return db.Conn.Do(ctx, "GRAPH.UDF", "LOAD", "REPLACE", libraryName, code).Err()
+}
+
 // LoadUDFFromFile loads a user defined function library from a file.
 func (db *FalkorDB) LoadUDFFromFile(libraryName, filePath string) error {
 	content, err := os.ReadFile(filePath)
@@ -172,6 +177,15 @@ func (db *FalkorDB) LoadUDFFromFile(libraryName, filePath string) error {
 		return err
 	}
 	return db.LoadUDF(libraryName, string(content))
+}
+
+// LoadUDFFromFileReplace loads a user defined function library from a file, replacing it if it already exists.
+func (db *FalkorDB) LoadUDFFromFileReplace(libraryName, filePath string) error {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+	return db.LoadUDFReplace(libraryName, string(content))
 }
 
 // IsUdfAlreadyRegisteredError checks if the error is due to the UDF library already being registered.
