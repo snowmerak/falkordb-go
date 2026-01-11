@@ -192,3 +192,100 @@ func (db *FalkorDB) LoadUDFFromFileReplace(libraryName, filePath string) error {
 func IsUdfAlreadyRegisteredError(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "already registered")
 }
+
+// UDFLibrary represents a user defined function library.
+type UDFLibrary struct {
+	Name      string
+	Functions []string
+	Code      string
+}
+
+type UDFListOptions struct {
+	LibraryName string
+	WithCode    bool
+}
+
+type UDFListOption func(*UDFListOptions)
+
+// WithUDFLibrary filters the list by library name.
+func WithUDFLibrary(name string) UDFListOption {
+	return func(o *UDFListOptions) {
+		o.LibraryName = name
+	}
+}
+
+// WithUDFCode includes the source code in the response.
+func WithUDFCode() UDFListOption {
+	return func(o *UDFListOptions) {
+		o.WithCode = true
+	}
+}
+
+// ListUDF lists loaded user defined function libraries.
+// It accepts optional arguments to filter by library name and to include source code.
+func (db *FalkorDB) ListUDF(opts ...UDFListOption) ([]UDFLibrary, error) {
+	options := &UDFListOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	args := []interface{}{"LIST"}
+	if options.LibraryName != "" {
+		args = append(args, options.LibraryName)
+	}
+	if options.WithCode {
+		args = append(args, "WITHCODE")
+	}
+
+	cmdArgs := append([]interface{}{"GRAPH.UDF"}, args...)
+	res, err := db.Conn.Do(ctx, cmdArgs...).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	rawList, ok := res.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unexpected response type from GRAPH.UDF LIST: %T", res)
+	}
+
+	libraries := make([]UDFLibrary, 0, len(rawList))
+	for _, item := range rawList {
+		rawLib, ok := item.(map[interface{}]interface{})
+		if !ok {
+			return nil, fmt.Errorf("unexpected item type in GRAPH.UDF LIST response: %T", item)
+		}
+
+		lib := UDFLibrary{}
+
+		if name, ok := rawLib["library_name"].(string); ok {
+			lib.Name = name
+		}
+
+		if funcs, ok := rawLib["functions"].([]interface{}); ok {
+			lib.Functions = make([]string, len(funcs))
+			for i, f := range funcs {
+				if s, ok := f.(string); ok {
+					lib.Functions[i] = s
+				}
+			}
+		}
+
+		if code, ok := rawLib["library_code"].(string); ok {
+			lib.Code = code
+		}
+
+		libraries = append(libraries, lib)
+	}
+
+	return libraries, nil
+}
+
+// DeleteUDF removes a user defined function library.
+func (db *FalkorDB) DeleteUDF(libraryName string) error {
+	return db.Conn.Do(ctx, "GRAPH.UDF", "DELETE", libraryName).Err()
+}
+
+// FlushUDFs removes all user defined function libraries.
+func (db *FalkorDB) FlushUDFs() error {
+	return db.Conn.Do(ctx, "GRAPH.UDF", "FLUSH").Err()
+}
