@@ -134,6 +134,105 @@ options := graph.NewQueryOptions().SetTimeout(10) // 10-millisecond timeout
 res, err := g.Query("MATCH (src {name: 'John Doe'})-[*]->(dest) RETURN dest", nil, options)
 ```
 
+## Advanced Graph Operations
+
+### Profile
+
+You can profile a query execution plan using the `Profile` method.
+
+```go
+res, err := g.Profile("MATCH (p:Person) RETURN p", nil, nil)
+if err != nil {
+    log.Fatal(err)
+}
+res.PrettyPrint() // Prints the execution plan
+```
+
+### Copy Graph
+
+You can copy a graph to a new key.
+
+```go
+err := db.CopyGraph("social", "social_backup")
+```
+
+### Memory Usage
+
+You can retrieve the memory usage of a specific graph.
+
+```go
+mem, err := g.MemoryUsage()
+// mem is a map[string]interface{} containing memory stats
+```
+
+## User Defined Functions (UDFs)
+
+`falkordb-go` supports managing UDF libraries.
+
+### Loading UDFs
+
+You can load UDFs from a string or a file. You can also use the `Replace` variants to overwrite existing libraries.
+
+```go
+// Load from string
+err := db.LoadUDF("mylib", "def my_func(a, b): return a + b")
+
+// Load from file
+err := db.LoadUDFFromFile("mylib", "/path/to/lib.py")
+
+// Load and replace if exists
+err := db.LoadUDFReplace("mylib", "def my_func(a, b): return a * b")
+err := db.LoadUDFFromFileReplace("mylib", "/path/to/lib.py")
+```
+
+### Listing UDFs
+
+You can list loaded UDF libraries, optionally filtering by name or including the source code.
+
+```go
+// List all libraries
+libs, err := db.ListUDF()
+
+// List specific library
+libs, err := db.ListUDF(falkordb.WithUDFLibrary("mylib"))
+
+// List with source code
+libs, err := db.ListUDF(falkordb.WithUDFCode())
+```
+
+### Deleting UDFs
+
+You can delete a specific library or flush all libraries.
+
+```go
+// Delete a specific library
+err := db.DeleteUDF("mylib")
+
+// Flush all libraries
+err := db.FlushUDFs()
+```
+
+## Supported Types
+
+`falkordb-go` automatically maps FalkorDB types to Go types:
+
+- **Nodes**: `graph.Node`
+- **Edges**: `graph.Edge`
+- **Paths**: `graph.Path`
+- **Maps**: `map[string]interface{}`
+- **Arrays**: `[]interface{}`
+- **Integers/Floats**: `int64`, `float64`
+- **Strings**: `string`
+- **Booleans**: `bool`
+- **Null**: `nil`
+- **Spatial Types**: `graph.Point`
+- **Vector Types**: `[]float32`
+- **Date/Time Types**:
+    - `date`: `time.Time`
+    - `localtime`: `time.Time` (Year 0)
+    - `localdatetime`: `time.Time`
+    - `duration`: `time.Duration`
+
 ## Connection options
 - Single instance: `falkordb.FalkorDBNew(&falkordb.ConnectionOption{Addr: "0.0.0.0:6379"})`
 - Cluster: `falkordb.FalkorDBNewCluster(&falkordb.ConnectionClusterOption{Addrs: []string{"0.0.0.0:6379"}})`
