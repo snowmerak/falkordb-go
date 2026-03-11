@@ -288,3 +288,68 @@ func BuildParamsHeader(params map[string]interface{}) string {
 	}
 	return header
 }
+
+// SlowLogEntry represents a single entry in the graph slow log.
+type SlowLogEntry struct {
+	Timestamp string
+	Command   string
+	Query     string
+	Duration  string
+}
+
+// SlowLog returns the slowest queries executed against this graph.
+// See: https://docs.falkordb.com/commands/graph.slowlog.html
+func (g *Graph) SlowLog() ([]SlowLogEntry, error) {
+	res, err := g.Conn.Do(ctx, "GRAPH.SLOWLOG", g.Id).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	return ParseSlowLogResponse(res)
+}
+
+// ParseSlowLogResponse parses the raw GRAPH.SLOWLOG response into SlowLogEntry slices.
+func ParseSlowLogResponse(res interface{}) ([]SlowLogEntry, error) {
+	raw, ok := res.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unexpected slowlog response type %T", res)
+	}
+
+	entries := make([]SlowLogEntry, 0, len(raw))
+	for _, item := range raw {
+		entry, ok := item.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("slowlog entry is not array: %T", item)
+		}
+
+		e := SlowLogEntry{}
+		if len(entry) > 0 {
+			if s, ok := entry[0].(string); ok {
+				e.Timestamp = s
+			}
+		}
+		if len(entry) > 1 {
+			if s, ok := entry[1].(string); ok {
+				e.Command = s
+			}
+		}
+		if len(entry) > 2 {
+			if s, ok := entry[2].(string); ok {
+				e.Query = s
+			}
+		}
+		if len(entry) > 3 {
+			if s, ok := entry[3].(string); ok {
+				e.Duration = s
+			}
+		}
+		entries = append(entries, e)
+	}
+
+	return entries, nil
+}
+
+// SlowLogReset clears the slow log for this graph.
+func (g *Graph) SlowLogReset() error {
+	return g.Conn.Do(ctx, "GRAPH.SLOWLOG", g.Id, "RESET").Err()
+}

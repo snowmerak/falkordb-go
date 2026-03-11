@@ -299,3 +299,125 @@ func (db *FalkorDB) DeleteUDF(libraryName string) error {
 func (db *FalkorDB) FlushUDFs() error {
 	return db.runOnAllMasters("GRAPH.UDF", "FLUSH")
 }
+
+// CreateConstraint creates a constraint on the graph.
+// constraintType: "MANDATORY" or "UNIQUE".
+// entityType: "NODE" or "RELATIONSHIP".
+// label: the node label or relationship type.
+// properties: attribute names to constrain.
+// See: https://docs.falkordb.com/commands/graph.constraint-create.html
+func (db *FalkorDB) CreateConstraint(graphName, constraintType, entityType, label string, properties []string) error {
+	args := []interface{}{
+		"GRAPH.CONSTRAINT", "CREATE",
+		graphName, constraintType, entityType, label,
+		"PROPERTIES", len(properties),
+	}
+	for _, p := range properties {
+		args = append(args, p)
+	}
+	return db.Conn.Do(ctx, args...).Err()
+}
+
+// DropConstraint removes a constraint from the graph.
+// See: https://docs.falkordb.com/commands/graph.constraint-drop.html
+func (db *FalkorDB) DropConstraint(graphName, constraintType, entityType, label string, properties []string) error {
+	args := []interface{}{
+		"GRAPH.CONSTRAINT", "DROP",
+		graphName, constraintType, entityType, label,
+		"PROPERTIES", len(properties),
+	}
+	for _, p := range properties {
+		args = append(args, p)
+	}
+	return db.Conn.Do(ctx, args...).Err()
+}
+
+// InfoSection specifies which queries to retrieve from GRAPH.INFO.
+type InfoSection string
+
+const (
+	// InfoAll returns both running and waiting queries.
+	InfoAll InfoSection = ""
+	// InfoRunningQueries returns only running queries.
+	InfoRunningQueries InfoSection = "RunningQueries"
+	// InfoWaitingQueries returns only waiting queries.
+	InfoWaitingQueries InfoSection = "WaitingQueries"
+)
+
+// GraphInfoQuery represents a single query entry returned by GRAPH.INFO.
+type GraphInfoQuery struct {
+	ReceivedAt int64
+	Graph      string
+	Query      string
+}
+
+// GraphInfo contains the running and waiting queries returned by GRAPH.INFO.
+type GraphInfo struct {
+	RunningQueries []GraphInfoQuery
+	WaitingQueries []GraphInfoQuery
+}
+
+// Info returns information about running and/or waiting queries.
+// See: https://docs.falkordb.com/commands/graph.info.html
+func (db *FalkorDB) Info(section InfoSection) (*GraphInfo, error) {
+	args := []interface{}{"GRAPH.INFO"}
+	if section != InfoAll {
+		args = append(args, string(section))
+	}
+
+	res, err := db.Conn.Do(ctx, args...).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	raw, ok := res.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unexpected GRAPH.INFO response type %T", res)
+	}
+
+	info := &GraphInfo{}
+
+	for i := 0; i < len(raw)-1; i += 2 {
+		header, ok := raw[i].(string)
+		if !ok {
+			continue
+		}
+		queries, ok := raw[i+1].([]interface{})
+		if !ok {
+			continue
+		}
+
+		parsed := make([]GraphInfoQuery, 0, len(queries))
+		for _, q := range queries {
+			entry, ok := q.([]interface{})
+			if !ok {
+				continue
+			}
+			giq := GraphInfoQuery{}
+			if len(entry) > 0 {
+				if v, ok := entry[0].(int64); ok {
+					giq.ReceivedAt = v
+				}
+			}
+			if len(entry) > 1 {
+				if v, ok := entry[1].(string); ok {
+					giq.Graph = v
+				}
+			}
+			if len(entry) > 2 {
+				if v, ok := entry[2].(string); ok {
+					giq.Query = v
+				}
+			}
+			parsed = append(parsed, giq)
+		}
+
+		if strings.Contains(header, "Running") {
+			info.RunningQueries = parsed
+		} else if strings.Contains(header, "Waiting") {
+			info.WaitingQueries = parsed
+		}
+	}
+
+	return info, nil
+}
