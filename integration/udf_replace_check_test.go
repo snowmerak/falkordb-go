@@ -44,6 +44,6 @@ func TestUDFReplace(t *testing.T) {
 	// 3. Load again with REPLACE
 	fmt.Println("Reloading UDF with REPLACE...")
 	// The syntax is GRAPH.UDF LOAD [REPLACE] <library_name> <library_script>
-	err = db.LoadUDFReplace("flex", code)
+	err = db.LoadUDFReplace(ctx, "flex", code)
 	assert.NoError(t, err, "GRAPH.UDF LOAD REPLACE should succeed even if library exists")
 }

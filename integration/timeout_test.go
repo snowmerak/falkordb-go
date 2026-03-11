@@ -15,13 +15,13 @@ func TestTimeout(t *testing.T) {
 	assert.Equal(t, 1, options.GetTimeout())
 
 	// Issue a long-running query with a 1-millisecond timeout.
-	res, err := graphInstance.Query("UNWIND range(0, 1000000) AS v WITH v WHERE v % 2 = 1 RETURN COUNT(v)", nil, options)
+	res, err := graphInstance.Query(ctx, "UNWIND range(0, 1000000) AS v WITH v WHERE v % 2 = 1 RETURN COUNT(v)", nil, options)
 	assert.Nil(t, res)
 	assert.NotNil(t, err)
 
 	params := make(map[string]interface{})
 	params["ub"] = 1000000
-	res, err = graphInstance.Query("UNWIND range(0, $ub) AS v RETURN v", params, options)
+	res, err = graphInstance.Query(ctx, "UNWIND range(0, $ub) AS v RETURN v", params, options)
 	assert.Nil(t, res)
 	assert.NotNil(t, err)
 }

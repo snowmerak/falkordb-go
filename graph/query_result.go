@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -86,7 +87,7 @@ func (qr *QueryResult) Statistics() map[string]float64 { return qr.statistics }
 // CurrentRecordIndex returns the current cursor position, or -1 if iteration has not started.
 func (qr *QueryResult) CurrentRecordIndex() int { return qr.currentRecordIdx }
 
-func QueryResultNew(g *Graph, response interface{}) (*QueryResult, error) {
+func QueryResultNew(ctx context.Context, g *Graph, response interface{}) (*QueryResult, error) {
 	qr := &QueryResult{
 		results:    nil,
 		statistics: nil,
@@ -122,7 +123,7 @@ func QueryResultNew(g *Graph, response interface{}) (*QueryResult, error) {
 		return nil, fmt.Errorf("unexpected response length %d", len(r))
 	}
 
-	if err := qr.parseResults(r); err != nil {
+	if err := qr.parseResults(ctx, r); err != nil {
 		return nil, err
 	}
 	if err := qr.parseStatistics(r[2]); err != nil {
@@ -136,7 +137,7 @@ func (qr *QueryResult) Empty() bool {
 	return len(qr.results) == 0
 }
 
-func (qr *QueryResult) parseResults(raw_result_set []interface{}) error {
+func (qr *QueryResult) parseResults(ctx context.Context, raw_result_set []interface{}) error {
 	if len(raw_result_set) < 2 {
 		return errors.New("result set missing header or records")
 	}
@@ -146,7 +147,7 @@ func (qr *QueryResult) parseResults(raw_result_set []interface{}) error {
 		return err
 	}
 
-	if err := qr.parseRecords(raw_result_set); err != nil {
+	if err := qr.parseRecords(ctx, raw_result_set); err != nil {
 		return err
 	}
 
@@ -214,7 +215,7 @@ func (qr *QueryResult) parseHeader(raw_header interface{}) error {
 	return nil
 }
 
-func (qr *QueryResult) parseRecords(raw_result_set []interface{}) error {
+func (qr *QueryResult) parseRecords(ctx context.Context, raw_result_set []interface{}) error {
 	records, ok := raw_result_set[1].([]interface{})
 	if !ok {
 		return fmt.Errorf("records payload is not array: %T", raw_result_set[1])
@@ -245,19 +246,19 @@ func (qr *QueryResult) parseRecords(raw_result_set []interface{}) error {
 				if !ok {
 					return fmt.Errorf("record %d column %d not scalar payload", i, idx)
 				}
-				s, err := qr.parseScalar(cval)
+				s, err := qr.parseScalar(ctx, cval)
 				if err != nil {
 					return err
 				}
 				values[idx] = s
 			case COLUMN_NODE:
-				v, err := qr.parseNode(c)
+				v, err := qr.parseNode(ctx, c)
 				if err != nil {
 					return err
 				}
 				values[idx] = v
 			case COLUMN_RELATION:
-				v, err := qr.parseEdge(c)
+				v, err := qr.parseEdge(ctx, c)
 				if err != nil {
 					return err
 				}
@@ -271,7 +272,7 @@ func (qr *QueryResult) parseRecords(raw_result_set []interface{}) error {
 	return nil
 }
 
-func (qr *QueryResult) parseProperties(props []interface{}) (map[string]interface{}, error) {
+func (qr *QueryResult) parseProperties(ctx context.Context, props []interface{}) (map[string]interface{}, error) {
 	// [[name, value type, value] X N]
 	properties := make(map[string]interface{})
 	for _, prop := range props {
@@ -283,11 +284,11 @@ func (qr *QueryResult) parseProperties(props []interface{}) (map[string]interfac
 		if !ok {
 			return nil, errors.New("property index not int64")
 		}
-		prop_name, err := qr.graph.schema.getProperty(int(idx))
+		prop_name, err := qr.graph.schema.getProperty(ctx, int(idx))
 		if err != nil {
 			return nil, err
 		}
-		prop_value, err := qr.parseScalar(p[1:])
+		prop_value, err := qr.parseScalar(ctx, p[1:])
 		if err != nil {
 			return nil, err
 		}
@@ -297,7 +298,7 @@ func (qr *QueryResult) parseProperties(props []interface{}) (map[string]interfac
 	return properties, nil
 }
 
-func (qr *QueryResult) parseNode(cell interface{}) (*domain.Node, error) {
+func (qr *QueryResult) parseNode(ctx context.Context, cell interface{}) (*domain.Node, error) {
 	// Node ID (integer),
 	// [label string offset (integer)],
 	// [[name, value type, value] X N]
@@ -320,7 +321,7 @@ func (qr *QueryResult) parseNode(cell interface{}) (*domain.Node, error) {
 		if !ok {
 			return nil, errors.New("label id not int64")
 		}
-		label, err := qr.graph.schema.getLabel(int(lid))
+		label, err := qr.graph.schema.getLabel(ctx, int(lid))
 		if err != nil {
 			return nil, err
 		}
@@ -331,7 +332,7 @@ func (qr *QueryResult) parseNode(cell interface{}) (*domain.Node, error) {
 	if !ok {
 		return nil, errors.New("node properties not array")
 	}
-	properties, err := qr.parseProperties(rawProps)
+	properties, err := qr.parseProperties(ctx, rawProps)
 	if err != nil {
 		return nil, err
 	}
@@ -341,7 +342,7 @@ func (qr *QueryResult) parseNode(cell interface{}) (*domain.Node, error) {
 	return n, nil
 }
 
-func (qr *QueryResult) parseEdge(cell interface{}) (*domain.Edge, error) {
+func (qr *QueryResult) parseEdge(ctx context.Context, cell interface{}) (*domain.Edge, error) {
 	// Edge ID (integer),
 	// reltype string offset (integer),
 	// src node ID offset (integer),
@@ -360,7 +361,7 @@ func (qr *QueryResult) parseEdge(cell interface{}) (*domain.Edge, error) {
 	if !ok {
 		return nil, errors.New("edge relation id not int64")
 	}
-	relation, err := qr.graph.schema.getRelation(int(r))
+	relation, err := qr.graph.schema.getRelation(ctx, int(r))
 	if err != nil {
 		return nil, err
 	}
@@ -377,7 +378,7 @@ func (qr *QueryResult) parseEdge(cell interface{}) (*domain.Edge, error) {
 	if !ok {
 		return nil, errors.New("edge properties not array")
 	}
-	properties, err := qr.parseProperties(rawProps)
+	properties, err := qr.parseProperties(ctx, rawProps)
 	if err != nil {
 		return nil, err
 	}
@@ -389,7 +390,7 @@ func (qr *QueryResult) parseEdge(cell interface{}) (*domain.Edge, error) {
 	return e, nil
 }
 
-func (qr *QueryResult) parseArray(cell interface{}) ([]interface{}, error) {
+func (qr *QueryResult) parseArray(ctx context.Context, cell interface{}) ([]interface{}, error) {
 	array, ok := cell.([]interface{})
 	if !ok {
 		return nil, errors.New("array payload is not array")
@@ -400,7 +401,7 @@ func (qr *QueryResult) parseArray(cell interface{}) ([]interface{}, error) {
 		if !ok {
 			return nil, fmt.Errorf("array element %d not scalar payload", i)
 		}
-		s, err := qr.parseScalar(inner)
+		s, err := qr.parseScalar(ctx, inner)
 		if err != nil {
 			return nil, err
 		}
@@ -409,7 +410,7 @@ func (qr *QueryResult) parseArray(cell interface{}) ([]interface{}, error) {
 	return array, nil
 }
 
-func (qr *QueryResult) parsePath(cell interface{}) (domain.Path, error) {
+func (qr *QueryResult) parsePath(ctx context.Context, cell interface{}) (domain.Path, error) {
 	arrays, ok := cell.([]interface{})
 	if !ok || len(arrays) < 2 {
 		return domain.Path{}, errors.New("path payload invalid")
@@ -422,11 +423,11 @@ func (qr *QueryResult) parsePath(cell interface{}) (domain.Path, error) {
 	if !ok {
 		return domain.Path{}, errors.New("path edges payload invalid")
 	}
-	nodesVal, err := qr.parseScalar(nodesRaw)
+	nodesVal, err := qr.parseScalar(ctx, nodesRaw)
 	if err != nil {
 		return domain.Path{}, err
 	}
-	edgesVal, err := qr.parseScalar(edgesRaw)
+	edgesVal, err := qr.parseScalar(ctx, edgesRaw)
 	if err != nil {
 		return domain.Path{}, err
 	}
@@ -458,7 +459,7 @@ func (qr *QueryResult) parsePath(cell interface{}) (domain.Path, error) {
 	return path, nil
 }
 
-func (qr *QueryResult) parseMap(cell interface{}) (map[string]interface{}, error) {
+func (qr *QueryResult) parseMap(ctx context.Context, cell interface{}) (map[string]interface{}, error) {
 	raw_map, ok := cell.([]interface{})
 	if !ok {
 		return nil, errors.New("map payload not array")
@@ -479,7 +480,7 @@ func (qr *QueryResult) parseMap(cell interface{}) (map[string]interface{}, error
 		if !ok {
 			return nil, errors.New("map value payload not scalar array")
 		}
-		s, err := qr.parseScalar(valRaw)
+		s, err := qr.parseScalar(ctx, valRaw)
 		if err != nil {
 			return nil, err
 		}
@@ -533,7 +534,7 @@ func (qr *QueryResult) parseVectorF32(cell interface{}) ([]float32, error) {
 	return res, nil
 }
 
-func (qr *QueryResult) parseScalar(cell []interface{}) (interface{}, error) {
+func (qr *QueryResult) parseScalar(ctx context.Context, cell []interface{}) (interface{}, error) {
 	if len(cell) < 2 {
 		return nil, errors.New("scalar cell too short")
 	}
@@ -575,19 +576,19 @@ func (qr *QueryResult) parseScalar(cell []interface{}) (interface{}, error) {
 		return strconv.ParseFloat(s, 64)
 
 	case VALUE_ARRAY:
-		return qr.parseArray(v)
+		return qr.parseArray(ctx, v)
 
 	case VALUE_EDGE:
-		return qr.parseEdge(v)
+		return qr.parseEdge(ctx, v)
 
 	case VALUE_NODE:
-		return qr.parseNode(v)
+		return qr.parseNode(ctx, v)
 
 	case VALUE_PATH:
-		return qr.parsePath(v)
+		return qr.parsePath(ctx, v)
 
 	case VALUE_MAP:
-		return qr.parseMap(v)
+		return qr.parseMap(ctx, v)
 
 	case VALUE_POINT:
 		return qr.parsePoint(v)

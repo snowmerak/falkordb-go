@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"context"
 	"errors"
 	"fmt"
 )
@@ -38,8 +39,8 @@ func (gs *GraphSchema) clear() {
 	gs.properties = []string{}
 }
 
-func (gs *GraphSchema) refresh_labels() error {
-	qr, err := gs.graph.CallProcedure("db.labels", nil)
+func (gs *GraphSchema) refresh_labels(ctx context.Context) error {
+	qr, err := gs.graph.CallProcedure(ctx, "db.labels", nil)
 	if err != nil {
 		return err
 	}
@@ -57,8 +58,8 @@ func (gs *GraphSchema) refresh_labels() error {
 	return nil
 }
 
-func (gs *GraphSchema) refresh_relationships() error {
-	qr, err := gs.graph.CallProcedure("db.relationshipTypes", nil)
+func (gs *GraphSchema) refresh_relationships(ctx context.Context) error {
+	qr, err := gs.graph.CallProcedure(ctx, "db.relationshipTypes", nil)
 	if err != nil {
 		return err
 	}
@@ -76,8 +77,8 @@ func (gs *GraphSchema) refresh_relationships() error {
 	return nil
 }
 
-func (gs *GraphSchema) refresh_properties() error {
-	qr, err := gs.graph.CallProcedure("db.propertyKeys", nil)
+func (gs *GraphSchema) refresh_properties(ctx context.Context) error {
+	qr, err := gs.graph.CallProcedure(ctx, "db.propertyKeys", nil)
 	if err != nil {
 		return err
 	}
@@ -95,9 +96,9 @@ func (gs *GraphSchema) refresh_properties() error {
 	return nil
 }
 
-func (gs *GraphSchema) getLabel(lblIdx int) (string, error) {
+func (gs *GraphSchema) getLabel(ctx context.Context, lblIdx int) (string, error) {
 	if lblIdx >= len(gs.labels) {
-		err := gs.refresh_labels()
+		err := gs.refresh_labels(ctx)
 		if err != nil {
 			return "", err
 		}
@@ -110,9 +111,9 @@ func (gs *GraphSchema) getLabel(lblIdx int) (string, error) {
 	return gs.labels[lblIdx], nil
 }
 
-func (gs *GraphSchema) getRelation(relIdx int) (string, error) {
+func (gs *GraphSchema) getRelation(ctx context.Context, relIdx int) (string, error) {
 	if relIdx >= len(gs.relationships) {
-		err := gs.refresh_relationships()
+		err := gs.refresh_relationships(ctx)
 		if err != nil {
 			return "", err
 		}
@@ -124,9 +125,9 @@ func (gs *GraphSchema) getRelation(relIdx int) (string, error) {
 	return gs.relationships[relIdx], nil
 }
 
-func (gs *GraphSchema) getProperty(propIdx int) (string, error) {
+func (gs *GraphSchema) getProperty(ctx context.Context, propIdx int) (string, error) {
 	if propIdx >= len(gs.properties) {
-		err := gs.refresh_properties()
+		err := gs.refresh_properties(ctx)
 		if err != nil {
 			return "", err
 		}

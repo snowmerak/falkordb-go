@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -10,6 +11,7 @@ import (
 
 var graphInstance *graph.Graph
 var db *falkordb.FalkorDB
+var ctx = context.Background()
 
 func createGraph() {
 	addr := os.Getenv("FALKORDB_ADDR")
@@ -32,9 +34,9 @@ func createGraph() {
 	}
 
 	graphInstance = db.SelectGraph("social")
-	graphInstance.Delete()
+	graphInstance.Delete(ctx)
 
-	_, err = graphInstance.Query("CREATE (:Person {name: 'John Doe', age: 33, gender: 'male', status: 'single'})-[:Visited {year: 2017}]->(c:Country {name: 'Japan', population: 126800000})", nil, nil)
+	_, err = graphInstance.Query(ctx, "CREATE (:Person {name: 'John Doe', age: 33, gender: 'male', status: 'single'})-[:Visited {year: 2017}]->(c:Country {name: 'Japan', population: 126800000})", nil, nil)
 	if err != nil {
 		panic(err)
 	}

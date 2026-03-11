@@ -81,7 +81,7 @@ func TestDateTypes(t *testing.T) {
 			continue
 		}
 		t.Run(q.query, func(t *testing.T) {
-			res, err := graphInstance.Query(q.query, nil, nil)
+			res, err := graphInstance.Query(ctx, q.query, nil, nil)
 			assert.Nil(t, err)
 			assert.False(t, res.Empty(), "Expecting resultset to have records")
 

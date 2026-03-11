@@ -16,7 +16,7 @@ func TestClusterRoutingAndComplexQueries(t *testing.T) {
 
 	for _, gName := range graphs {
 		g := db.SelectGraph(gName)
-		g.Delete() // Ensure clean state
+		g.Delete(ctx) // Ensure clean state
 
 		// Create a chain of nodes
 		query := `
@@ -25,7 +25,7 @@ func TestClusterRoutingAndComplexQueries(t *testing.T) {
                    (n3)-[:NEXT]->(n4:Node {id: 4}),
                    (n4)-[:NEXT]->(n5:Node {id: 5})
         `
-		_, err := g.Query(query, nil, nil)
+		_, err := g.Query(ctx, query, nil, nil)
 		assert.Nil(t, err, "Failed to create data in graph %s", gName)
 	}
 
@@ -35,7 +35,7 @@ func TestClusterRoutingAndComplexQueries(t *testing.T) {
 
 		// Variable length path query
 		query := "MATCH (n1:Node {id: 1})-[:NEXT*]->(target) RETURN count(target) as count"
-		res, err := g.Query(query, nil, nil)
+		res, err := g.Query(ctx, query, nil, nil)
 		assert.Nil(t, err, "Failed to query graph %s", gName)
 
 		assert.True(t, res.Next())
@@ -44,6 +44,6 @@ func TestClusterRoutingAndComplexQueries(t *testing.T) {
 		val := record.GetByIndex(0)
 		assert.EqualValues(t, 4, val, "Incorrect path count in graph %s", gName)
 
-		g.Delete()
+		g.Delete(ctx)
 	}
 }

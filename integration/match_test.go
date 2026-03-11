@@ -10,7 +10,7 @@ import (
 
 func TestMatchQuery(t *testing.T) {
 	q := "MATCH (s)-[e]->(d) RETURN s,e,d"
-	res, err := graphInstance.Query(q, nil, nil)
+	res, err := graphInstance.Query(ctx, q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -20,7 +20,7 @@ func TestMatchQuery(t *testing.T) {
 
 func TestMatchROQuery(t *testing.T) {
 	q := "MATCH (s)-[e]->(d) RETURN s,e,d"
-	res, err := graphInstance.ROQuery(q, nil, nil)
+	res, err := graphInstance.ROQuery(ctx, q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}

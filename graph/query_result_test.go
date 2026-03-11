@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -12,6 +13,8 @@ import (
 func makeCell(typ ResultSetScalarTypes, val interface{}) []interface{} {
 	return []interface{}{int64(typ), val}
 }
+
+var testCtx = context.Background()
 
 func TestQueryResultNew_EdgeCases(t *testing.T) {
 	// Setup a graph with a pre-populated schema for testing
@@ -146,7 +149,7 @@ func TestQueryResultNew_EdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := QueryResultNew(g, tt.response)
+			_, err := QueryResultNew(testCtx, g, tt.response)
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errContains != "" {
@@ -232,7 +235,7 @@ func TestParseScalar_EdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := qr.parseScalar(tt.cell)
+			_, err := qr.parseScalar(testCtx, tt.cell)
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errContains != "" {
@@ -303,7 +306,7 @@ func TestParseDateTypes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := qr.parseScalar(tt.cell)
+			got, err := qr.parseScalar(testCtx, tt.cell)
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errContains != "" {

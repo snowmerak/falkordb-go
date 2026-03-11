@@ -15,14 +15,14 @@ func TestCopyGraph(t *testing.T) {
 	// Ensure destination graph does not exist
 	destGraphName := "social_copy"
 	destGraph := db.SelectGraph(destGraphName)
-	destGraph.Delete()
+	destGraph.Delete(ctx)
 
 	// Copy "social" to "social_copy"
-	err := db.CopyGraph("social", destGraphName)
+	err := db.CopyGraph(ctx, "social", destGraphName)
 	assert.Nil(t, err)
 
 	// Verify data in copied graph
-	res, err := destGraph.Query("MATCH (n) RETURN count(n)", nil, nil)
+	res, err := destGraph.Query(ctx, "MATCH (n) RETURN count(n)", nil, nil)
 	assert.Nil(t, err)
 	assert.False(t, res.Empty())
 	
@@ -32,5 +32,5 @@ func TestCopyGraph(t *testing.T) {
 	assert.Equal(t, int64(2), val)
 
 	// Cleanup
-	destGraph.Delete()
+	destGraph.Delete(ctx)
 }

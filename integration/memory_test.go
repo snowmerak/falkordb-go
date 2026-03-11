@@ -15,7 +15,7 @@ func TestMemoryUsage(t *testing.T) {
 	createGraph()
 
 	// Default samples
-	info, err := graphInstance.MemoryUsage(-1)
+	info, err := graphInstance.MemoryUsage(ctx, -1)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, info)
 
@@ -25,7 +25,7 @@ func TestMemoryUsage(t *testing.T) {
 	}
 
 	// With specific samples
-	info2, err := graphInstance.MemoryUsage(50)
+	info2, err := graphInstance.MemoryUsage(ctx, 50)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, info2)
 

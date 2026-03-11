@@ -57,7 +57,7 @@ func TestLoadUDFAndBitwise(t *testing.T) {
 
 	// 2. Load UDF into FalkorDB
 	fmt.Println("Loading UDF into FalkorDB...")
-	err = db.LoadUDFFromFile("flex", tmpPath)
+	err = db.LoadUDFFromFile(ctx, "flex", tmpPath)
 	if err != nil && !falkordb.IsUdfAlreadyRegisteredError(err) {
 		assert.NoError(t, err)
 	} else if err != nil {
@@ -69,7 +69,7 @@ func TestLoadUDFAndBitwise(t *testing.T) {
 	query := "RETURN flex.bitwise.and(3, 1)"
 	fmt.Printf("Executing query: %s\n", query)
 
-	res, err := graphInstance.Query(query, nil, nil)
+	res, err := graphInstance.Query(ctx, query, nil, nil)
 	assert.NoError(t, err)
 	if err == nil {
 		assert.False(t, res.Empty(), "Result should not be empty")
