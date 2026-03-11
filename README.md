@@ -11,7 +11,7 @@
 - Parses nodes, edges, paths, arrays, maps, points, and vectors into Go types.
 - Exposes query statistics plus PrettyPrint for quick inspection.
 - Supports single instance, cluster, sentinel discovery, and TLS via URL schemes.
-- Full `context.Context` support via `*Context` method variants.
+- Full `context.Context` support via `*Context` methods.
 - `trunk` is the primary, up-to-date branch.
 
 ## Quick start
@@ -33,6 +33,7 @@ go get github.com/snowmerak/falkordb-go
 package main
 
 import (
+    "context"
     "log"
 
     "github.com/snowmerak/falkordb-go"
@@ -40,6 +41,8 @@ import (
 )
 
 func main() {
+    ctx := context.Background()
+
     db, err := falkordb.FromURL("falkor://0.0.0.0:6379")
     if err != nil {
         log.Fatal(err)
@@ -47,13 +50,13 @@ func main() {
 
     g := db.SelectGraph("social")
 
-    _, err = g.Query("CREATE (:Person {name:'John Doe', age:33})", nil, nil)
+    _, err = g.QueryContext(ctx, "CREATE (:Person {name:'John Doe', age:33})", nil, nil)
     if err != nil {
         log.Fatal(err)
     }
 
     opts := graph.NewQueryOptions().SetTimeout(10) // ms timeout
-    res, err := g.Query("MATCH (p:Person) RETURN p.name, p.age", nil, opts)
+    res, err := g.QueryContext(ctx, "MATCH (p:Person) RETURN p.name, p.age", nil, opts)
     if err != nil {
         log.Fatal(err)
     }
@@ -62,22 +65,16 @@ func main() {
 }
 ```
 
-## Context Support
+## Migration from v1
 
-All methods have a `*Context` variant that accepts `context.Context` as the first parameter, following the `database/sql` pattern:
+All methods without `Context` suffix are deprecated and annotated with `//go:fix inline`. Run `go fix ./...` to automatically migrate:
 
-```go
-ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-defer cancel()
-
-// Using Context variant
-res, err := g.QueryContext(ctx, "MATCH (p:Person) RETURN p", nil, nil)
-
-// Legacy (uses context.Background() internally)
-res, err := g.Query("MATCH (p:Person) RETURN p", nil, nil)
+```diff
+-res, err := g.Query("MATCH (n) RETURN n", nil, nil)
++res, err := g.QueryContext(context.Background(), "MATCH (n) RETURN n", nil, nil)
 ```
 
-Available `*Context` methods: `QueryContext`, `ROQueryContext`, `DeleteContext`, `ProfileContext`, `PipelineContext`, `MemoryUsageContext`, `CallProcedureContext`, `ExecutionPlanContext`, `SlowLogContext`, `SlowLogResetContext`, `CopyGraphContext`, `ListGraphsContext`, `ConfigGetContext`, `ConfigSetContext`, `LoadUDFContext`, `ListUDFContext`, `DeleteUDFContext`, `FlushUDFsContext`, `CreateConstraintContext`, `DropConstraintContext`, `InfoContext`.
+The old methods remain available for backward compatibility but will delegate to `context.Background()` internally.
 
 ## Usage and examples
 
@@ -86,8 +83,8 @@ The complete API is documented on [pkg.go.dev](https://pkg.go.dev/github.com/sno
 - Query vs ROQuery
 
 ```go
-res, err := g.Query("MATCH (p:Person) RETURN p.name", nil, nil)
-roRes, err := g.ROQuery("MATCH (p:Person) RETURN p.name", nil, nil)
+res, err := g.QueryContext(ctx, "MATCH (p:Person) RETURN p.name", nil, nil)
+roRes, err := g.ROQueryContext(ctx, "MATCH (p:Person) RETURN p.name", nil, nil)
 ```
 
 - Iterating results
@@ -104,7 +101,7 @@ for res.Next() {
 
 ```go
 opts := graph.NewQueryOptions().SetTimeout(5)
-res, err := g.Query("UNWIND range(0, 1000000) AS v RETURN v", nil, opts)
+res, err := g.QueryContext(ctx, "UNWIND range(0, 1000000) AS v RETURN v", nil, opts)
 ```
 
 - Read-only client
@@ -116,17 +113,17 @@ if err != nil { log.Fatal(err) }
 g := db.SelectGraph("social")
 
 // This will error because the graph is read-only
-_, err = g.Query("CREATE (:X)", nil, nil)
+_, err = g.QueryContext(ctx, "CREATE (:X)", nil, nil)
 
 // RO queries are allowed
-res, err := g.ROQuery("MATCH (n) RETURN n", nil, nil)
+res, err := g.ROQueryContext(ctx, "MATCH (n) RETURN n", nil, nil)
 ```
 
 - Pipelined batch queries
 
 ```go
 reqs := []graph.QueryRequest{
-    { // defaults to GRAPH.QUERY when Command is empty
+    {
         Query:   "MATCH (p:Person) RETURN p",
         Options: graph.NewQueryOptions().SetTimeout(50),
     },
@@ -136,7 +133,7 @@ reqs := []graph.QueryRequest{
         Params:  map[string]interface{}{"name": "Japan"},
     },
 }
-batch, err := g.Pipeline(reqs)
+batch, err := g.PipelineContext(ctx, reqs)
 if err != nil {
     log.Fatal(err)
 }
@@ -145,162 +142,120 @@ if err != nil {
 
 ## Running queries with timeouts
 
-Queries can be run with a millisecond-level timeout as described in [the documentation](https://docs.falkordb.com/configuration.html#timeout). To take advantage of this feature, the `QueryOptions` struct should be used:
-
 ```go
 options := graph.NewQueryOptions().SetTimeout(10) // 10-millisecond timeout
-res, err := g.Query("MATCH (src {name: 'John Doe'})-[*]->(dest) RETURN dest", nil, options)
+res, err := g.QueryContext(ctx, "MATCH (src {name: 'John Doe'})-[*]->(dest) RETURN dest", nil, options)
 ```
 
 ## Advanced Graph Operations
 
 ### Profile
 
-You can profile a query execution plan using the `Profile` method.
-
 ```go
-res, err := g.Profile("MATCH (p:Person) RETURN p", nil, nil)
-if err != nil {
-    log.Fatal(err)
-}
-// res is []string with execution plan lines
+lines, err := g.ProfileContext(ctx, "MATCH (p:Person) RETURN p", nil, nil)
+// lines is []string with execution plan
 ```
 
 ### Copy Graph
 
-You can copy a graph to a new key.
-
 ```go
-err := db.CopyGraph("social", "social_backup")
+err := db.CopyGraphContext(ctx, "social", "social_backup")
 ```
 
 ### Memory Usage
 
-You can retrieve the memory usage of a specific graph.
-
 ```go
-mem, err := g.MemoryUsage(-1) // -1 for default sample count
-// mem is a map[string]interface{} containing memory stats
+mem, err := g.MemoryUsageContext(ctx, -1) // -1 for default sample count
 ```
 
 ### Constraints
 
-Create and drop UNIQUE or MANDATORY constraints.
-
 ```go
 // Create a UNIQUE constraint (requires an existing index)
-err := db.CreateConstraint("social", "UNIQUE", "NODE", "Person", []string{"name"})
+err := db.CreateConstraintContext(ctx, "social", "UNIQUE", "NODE", "Person", []string{"name"})
 
 // Create a MANDATORY constraint
-err := db.CreateConstraint("social", "MANDATORY", "NODE", "Person", []string{"age"})
+err := db.CreateConstraintContext(ctx, "social", "MANDATORY", "NODE", "Person", []string{"age"})
 
 // Drop a constraint
-err := db.DropConstraint("social", "MANDATORY", "NODE", "Person", []string{"age"})
+err := db.DropConstraintContext(ctx, "social", "MANDATORY", "NODE", "Person", []string{"age"})
 ```
 
 ### Slow Log
 
-Retrieve and reset the slowest queries.
-
 ```go
-entries, err := g.SlowLog()
+entries, err := g.SlowLogContext(ctx)
 for _, e := range entries {
     log.Printf("ts=%s cmd=%s query=%s duration=%s", e.Timestamp, e.Command, e.Query, e.Duration)
 }
 
-err = g.SlowLogReset()
+err = g.SlowLogResetContext(ctx)
 ```
 
 ### Server Info
 
-Query running and waiting queries across the server.
-
 ```go
-info, err := db.Info(falkordb.InfoAll) // or InfoRunningQueries, InfoWaitingQueries
+info, err := db.InfoContext(ctx, falkordb.InfoAll) // or InfoRunningQueries, InfoWaitingQueries
 log.Printf("Running: %d, Waiting: %d", len(info.RunningQueries), len(info.WaitingQueries))
 ```
 
 ## User Defined Functions (UDFs)
 
-`falkordb-go` supports managing UDF libraries.
-
 ### Loading UDFs
 
-You can load UDFs from a string or a file. You can also use the `Replace` variants to overwrite existing libraries.
-
 ```go
-// Load from string
-err := db.LoadUDF("mylib", "def my_func(a, b): return a + b")
+err := db.LoadUDFContext(ctx, "mylib", "function my_func(a, b) { return a + b }")
 
-// Load from file
-err := db.LoadUDFFromFile("mylib", "/path/to/lib.py")
+err := db.LoadUDFFromFileContext(ctx, "mylib", "/path/to/lib.js")
 
 // Load and replace if exists
-err := db.LoadUDFReplace("mylib", "def my_func(a, b): return a * b")
-err := db.LoadUDFFromFileReplace("mylib", "/path/to/lib.py")
+err := db.LoadUDFReplaceContext(ctx, "mylib", "function my_func(a, b) { return a * b }")
 ```
 
 ### Listing UDFs
 
-You can list loaded UDF libraries, optionally filtering by name or including the source code.
-
 ```go
-// List all libraries
-libs, err := db.ListUDF()
+libs, err := db.ListUDFContext(ctx)
 
-// List specific library
-libs, err := db.ListUDF(falkordb.WithUDFLibrary("mylib"))
+libs, err := db.ListUDFContext(ctx, falkordb.WithUDFLibrary("mylib"))
 
-// List with source code
-libs, err := db.ListUDF(falkordb.WithUDFCode())
+libs, err := db.ListUDFContext(ctx, falkordb.WithUDFCode())
 ```
 
 ### Deleting UDFs
 
-You can delete a specific library or flush all libraries.
-
 ```go
-// Delete a specific library
-err := db.DeleteUDF("mylib")
+err := db.DeleteUDFContext(ctx, "mylib")
 
-// Flush all libraries
-err := db.FlushUDFs()
+err := db.FlushUDFsContext(ctx)
 ```
 
 ## Supported Types
 
-`falkordb-go` automatically maps FalkorDB types to Go types:
-
-- **Nodes**: `domain.Node`
-- **Edges**: `domain.Edge`
-- **Paths**: `domain.Path`
-- **Maps**: `map[string]interface{}`
-- **Arrays**: `[]interface{}`
-- **Integers/Floats**: `int64`, `float64`
-- **Strings**: `string`
-- **Booleans**: `bool`
-- **Null**: `nil`
-- **Spatial Types**: `map[string]interface{}` (latitude, longitude)
-- **Vector Types**: `[]float32`
-- **Date/Time Types**:
-    - `date`: `time.Time`
-    - `localtime`: `time.Time` (Year 0)
-    - `localdatetime`: `time.Time`
-    - `duration`: `time.Duration`
+| FalkorDB Type | Go Type |
+|---|---|
+| Node | `domain.Node` |
+| Edge | `domain.Edge` |
+| Path | `domain.Path` |
+| Map | `map[string]interface{}` |
+| Array | `[]interface{}` |
+| Integer | `int64` |
+| Float | `float64` |
+| String | `string` |
+| Boolean | `bool` |
+| Null | `nil` |
+| Point | `map[string]interface{}` |
+| Vector | `[]float32` |
+| Date / LocalDateTime | `time.Time` |
+| LocalTime | `time.Time` |
+| Duration | `time.Duration` |
 
 ## Connection options
 - Single instance: `falkordb.New(&falkordb.ConnectionOption{Addr: "0.0.0.0:6379"})`
 - Cluster: `falkordb.NewCluster(&falkordb.ConnectionClusterOption{Addrs: []string{"0.0.0.0:6379"}})`
 - URL-based (sentinel/TLS aware): `falkordb.FromURL("falkor://host:port")` or `falkors://` for TLS.
-- Environment defaults used in tests: `FALKORDB_ADDR` for host:port, `FALKORDB_TEST_MODE=cluster` to switch client mode.
-
-## Examples
-- Start a standalone server: `docker compose -f docker-compose.standalone.yml up -d` or `task standalone:up`
-- Start a clustered server: `docker compose -f docker-compose.cluster.yml up -d` or `task cluster:up`
 
 ## Running tests
-
-A simple test suite is provided, and can be run with:
 
 ```
 task test
@@ -308,7 +263,7 @@ task test
 go test ./...
 ```
 
-The tests expect a FalkorDB server to be available at localhost:6379 (or the address in `FALKORDB_ADDR`). Task automation is defined in [`Taskfile.yml`](https://taskfile.dev).
+The tests expect a FalkorDB server at localhost:6379 (or `FALKORDB_ADDR`). Task automation is in [`Taskfile.yml`](https://taskfile.dev).
 
 ## License
 
