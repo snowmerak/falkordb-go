@@ -40,7 +40,7 @@ func (gs *GraphSchema) clear() {
 }
 
 func (gs *GraphSchema) refresh_labels(ctx context.Context) error {
-	qr, err := gs.graph.CallProcedure(ctx, "db.labels", nil)
+	qr, err := gs.graph.CallProcedureContext(ctx, "db.labels", nil)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (gs *GraphSchema) refresh_labels(ctx context.Context) error {
 }
 
 func (gs *GraphSchema) refresh_relationships(ctx context.Context) error {
-	qr, err := gs.graph.CallProcedure(ctx, "db.relationshipTypes", nil)
+	qr, err := gs.graph.CallProcedureContext(ctx, "db.relationshipTypes", nil)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (gs *GraphSchema) refresh_relationships(ctx context.Context) error {
 }
 
 func (gs *GraphSchema) refresh_properties(ctx context.Context) error {
-	qr, err := gs.graph.CallProcedure(ctx, "db.propertyKeys", nil)
+	qr, err := gs.graph.CallProcedureContext(ctx, "db.propertyKeys", nil)
 	if err != nil {
 		return err
 	}

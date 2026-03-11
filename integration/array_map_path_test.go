@@ -8,22 +8,22 @@ import (
 )
 
 func TestArray(t *testing.T) {
-	graphInstance.Query(ctx, "MATCH (n) DELETE n", nil, nil)
+	graphInstance.QueryContext(ctx, "MATCH (n) DELETE n", nil, nil)
 
 	q := "CREATE (:person{name:'a',age:32,array:[0,1,2]})"
-	res, err := graphInstance.Query(ctx, q, nil, nil)
+	res, err := graphInstance.QueryContext(ctx, q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
 
 	q = "CREATE (:person{name:'b',age:30,array:[3,4,5]})"
-	res, err = graphInstance.Query(ctx, q, nil, nil)
+	res, err = graphInstance.QueryContext(ctx, q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
 
 	q = "WITH [0,1,2] as x return x"
-	res, err = graphInstance.Query(ctx, q, nil, nil)
+	res, err = graphInstance.QueryContext(ctx, q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -34,7 +34,7 @@ func TestArray(t *testing.T) {
 	assert.Equal(t, []interface{}{int64(0), int64(1), int64(2)}, r.GetByIndex(0))
 
 	q = "unwind([0,1,2]) as x return x"
-	res, err = graphInstance.Query(ctx, q, nil, nil)
+	res, err = graphInstance.QueryContext(ctx, q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -48,7 +48,7 @@ func TestArray(t *testing.T) {
 	}
 
 	q = "MATCH(n) return collect(n) as x"
-	res, err = graphInstance.Query(ctx, q, nil, nil)
+	res, err = graphInstance.QueryContext(ctx, q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -94,7 +94,7 @@ func TestMap(t *testing.T) {
 	createGraph()
 
 	q := "RETURN {val_1: 5, val_2: 'str', inner: {x: [1]}}"
-	res, err := graphInstance.Query(ctx, q, nil, nil)
+	res, err := graphInstance.QueryContext(ctx, q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -107,7 +107,7 @@ func TestMap(t *testing.T) {
 	assert.Equal(t, mapval, expected, "expecting a map literal")
 
 	q = "MATCH (a:Country) RETURN a { .name }"
-	res, err = graphInstance.Query(ctx, q, nil, nil)
+	res, err = graphInstance.QueryContext(ctx, q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -122,7 +122,7 @@ func TestMap(t *testing.T) {
 func TestPath(t *testing.T) {
 	createGraph()
 	q := "MATCH p = (:Person)-[:Visited]->(:Country) RETURN p"
-	res, err := graphInstance.Query(ctx, q, nil, nil)
+	res, err := graphInstance.QueryContext(ctx, q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -161,7 +161,7 @@ func TestPath(t *testing.T) {
 
 func TestPoint(t *testing.T) {
 	q := "RETURN point({latitude: 37.0, longitude: -122.0})"
-	res, err := graphInstance.Query(ctx, q, nil, nil)
+	res, err := graphInstance.QueryContext(ctx, q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -174,7 +174,7 @@ func TestPoint(t *testing.T) {
 
 func TestVectorF32(t *testing.T) {
 	q := "RETURN vecf32([1.0, 2.0, 3.0])"
-	res, err := graphInstance.Query(ctx, q, nil, nil)
+	res, err := graphInstance.QueryContext(ctx, q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}

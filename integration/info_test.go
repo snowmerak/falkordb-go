@@ -15,7 +15,7 @@ func TestInfoAll(t *testing.T) {
 
 	createGraph()
 
-	info, err := db.Info(ctx, falkordb.InfoAll)
+	info, err := db.InfoContext(ctx, falkordb.InfoAll)
 	assert.Nil(t, err)
 	assert.NotNil(t, info)
 
@@ -30,7 +30,7 @@ func TestInfoRunningQueries(t *testing.T) {
 
 	createGraph()
 
-	info, err := db.Info(ctx, falkordb.InfoRunningQueries)
+	info, err := db.InfoContext(ctx, falkordb.InfoRunningQueries)
 	assert.Nil(t, err)
 	assert.NotNil(t, info)
 
@@ -45,7 +45,7 @@ func TestInfoWaitingQueries(t *testing.T) {
 
 	createGraph()
 
-	info, err := db.Info(ctx, falkordb.InfoWaitingQueries)
+	info, err := db.InfoContext(ctx, falkordb.InfoWaitingQueries)
 	assert.Nil(t, err)
 	assert.NotNil(t, info)
 

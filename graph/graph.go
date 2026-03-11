@@ -59,12 +59,12 @@ func NewGraphWithSchema(schema GraphSchema) *Graph {
 }
 
 // ExecutionPlan gets the execution plan for given query.
-func (g *Graph) ExecutionPlan(ctx context.Context, query string) (string, error) {
+func (g *Graph) ExecutionPlanContext(ctx context.Context, query string) (string, error) {
 	return g.Conn.Do(ctx, "GRAPH.EXPLAIN", g.Id, query).Text()
 }
 
 // Profile executes a query and returns an execution plan augmented with metrics.
-func (g *Graph) Profile(ctx context.Context, query string, params map[string]interface{}, options *QueryOptions) ([]string, error) {
+func (g *Graph) ProfileContext(ctx context.Context, query string, params map[string]interface{}, options *QueryOptions) ([]string, error) {
 	if params != nil {
 		query = BuildParamsHeader(params) + query
 	}
@@ -101,7 +101,7 @@ func parseProfileResponse(res interface{}) ([]string, error) {
 }
 
 // Delete removes the graph.
-func (g *Graph) Delete(ctx context.Context) error {
+func (g *Graph) DeleteContext(ctx context.Context) error {
 	err := g.Conn.Do(ctx, "GRAPH.DELETE", g.Id).Err()
 
 	// clear internal mappings
@@ -128,7 +128,7 @@ func (options *QueryOptions) GetTimeout() int {
 	return options.timeout
 }
 
-func (g *Graph) query(ctx context.Context, command string, query string, params map[string]interface{}, options *QueryOptions) (*QueryResult, error) {
+func (g *Graph) queryInternal(ctx context.Context, command string, query string, params map[string]interface{}, options *QueryOptions) (*QueryResult, error) {
 	if g.readonly && command != CmdROQuery {
 		return nil, errors.New("graph is read-only")
 	}
@@ -152,7 +152,7 @@ func (g *Graph) query(ctx context.Context, command string, query string, params 
 
 // Pipeline executes multiple graph commands in a single round-trip and returns results in order.
 // Each request can target GRAPH.QUERY or GRAPH.RO_QUERY via the Command field (defaults to GRAPH.QUERY).
-func (g *Graph) Pipeline(ctx context.Context, reqs []QueryRequest) ([]*QueryResult, error) {
+func (g *Graph) PipelineContext(ctx context.Context, reqs []QueryRequest) ([]*QueryResult, error) {
 	if len(reqs) == 0 {
 		return nil, nil
 	}
@@ -204,20 +204,20 @@ func (g *Graph) Pipeline(ctx context.Context, reqs []QueryRequest) ([]*QueryResu
 }
 
 // Query executes a query against the graph.
-func (g *Graph) Query(ctx context.Context, query string, params map[string]interface{}, options *QueryOptions) (*QueryResult, error) {
-	return g.query(ctx, CmdQuery, query, params, options)
+func (g *Graph) QueryContext(ctx context.Context, query string, params map[string]interface{}, options *QueryOptions) (*QueryResult, error) {
+	return g.queryInternal(ctx, CmdQuery, query, params, options)
 }
 
-// ROQuery executes a read only query against the graph.
-func (g *Graph) ROQuery(ctx context.Context, query string, params map[string]interface{}, options *QueryOptions) (*QueryResult, error) {
-	return g.query(ctx, CmdROQuery, query, params, options)
+// ROQueryContext executes a read only query against the graph.
+func (g *Graph) ROQueryContext(ctx context.Context, query string, params map[string]interface{}, options *QueryOptions) (*QueryResult, error) {
+	return g.queryInternal(ctx, CmdROQuery, query, params, options)
 }
 
 // Procedures
 
 // MemoryUsage returns detailed memory consumption statistics for a specific graph.
 // samples: Number of samples to take when estimating memory usage. (default 100 if -1)
-func (g *Graph) MemoryUsage(ctx context.Context, samples int) (map[string]interface{}, error) {
+func (g *Graph) MemoryUsageContext(ctx context.Context, samples int) (map[string]interface{}, error) {
 	args := []interface{}{"GRAPH.MEMORY", "USAGE", g.Id}
 	if samples > 0 {
 		args = append(args, "SAMPLES", samples)
@@ -262,7 +262,7 @@ func (g *Graph) MemoryUsage(ctx context.Context, samples int) (map[string]interf
 }
 
 // CallProcedure invokes procedure.
-func (g *Graph) CallProcedure(ctx context.Context, procedure string, yield []string, args ...interface{}) (*QueryResult, error) {
+func (g *Graph) CallProcedureContext(ctx context.Context, procedure string, yield []string, args ...interface{}) (*QueryResult, error) {
 	query := fmt.Sprintf("CALL %s(", procedure)
 
 	tmp := make([]string, 0, len(args))
@@ -275,7 +275,7 @@ func (g *Graph) CallProcedure(ctx context.Context, procedure string, yield []str
 		query += fmt.Sprintf(" YIELD %s", strings.Join(yield, ","))
 	}
 
-	return g.Query(ctx, query, nil, nil)
+	return g.QueryContext(ctx, query, nil, nil)
 }
 
 // BuildParamsHeader builds a CYPHER params header from key/value pairs.
@@ -297,7 +297,7 @@ type SlowLogEntry struct {
 
 // SlowLog returns the slowest queries executed against this graph.
 // See: https://docs.falkordb.com/commands/graph.slowlog.html
-func (g *Graph) SlowLog(ctx context.Context) ([]SlowLogEntry, error) {
+func (g *Graph) SlowLogContext(ctx context.Context) ([]SlowLogEntry, error) {
 	res, err := g.Conn.Do(ctx, "GRAPH.SLOWLOG", g.Id).Result()
 	if err != nil {
 		return nil, err
@@ -348,6 +348,6 @@ func ParseSlowLogResponse(res interface{}) ([]SlowLogEntry, error) {
 }
 
 // SlowLogReset clears the slow log for this graph.
-func (g *Graph) SlowLogReset(ctx context.Context) error {
+func (g *Graph) SlowLogResetContext(ctx context.Context) error {
 	return g.Conn.Do(ctx, "GRAPH.SLOWLOG", g.Id, "RESET").Err()
 }

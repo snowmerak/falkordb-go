@@ -9,7 +9,7 @@ import (
 
 func TestCreateQuery(t *testing.T) {
 	q := "CREATE (w:WorkPlace {name:'FalkorDB'})"
-	res, err := graphInstance.Query(ctx, q, nil, nil)
+	res, err := graphInstance.QueryContext(ctx, q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -21,7 +21,7 @@ func TestCreateQuery(t *testing.T) {
 	assert.Equal(t, res.PropertiesSet(), 1, "Expecting a songle property to be added.")
 
 	q = "MATCH (w:WorkPlace) RETURN w"
-	res, err = graphInstance.Query(ctx, q, nil, nil)
+	res, err = graphInstance.QueryContext(ctx, q, nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -35,18 +35,18 @@ func TestCreateQuery(t *testing.T) {
 
 func TestCreateROQueryFailure(t *testing.T) {
 	q := "CREATE (w:WorkPlace {name:'FalkorDB'})"
-	_, err := graphInstance.ROQuery(ctx, q, nil, nil)
+	_, err := graphInstance.ROQueryContext(ctx, q, nil, nil)
 	assert.NotNil(t, err, "error should not be nil")
 }
 
 func TestErrorReporting(t *testing.T) {
 	q := "RETURN toupper(5)"
-	res, err := graphInstance.Query(ctx, q, nil, nil)
+	res, err := graphInstance.QueryContext(ctx, q, nil, nil)
 	assert.Nil(t, res)
 	assert.NotNil(t, err)
 
 	q = "MATCH (p:Person) RETURN toupper(p.age)"
-	res, err = graphInstance.Query(ctx, q, nil, nil)
+	res, err = graphInstance.QueryContext(ctx, q, nil, nil)
 	assert.Nil(t, res)
 	assert.NotNil(t, err)
 }

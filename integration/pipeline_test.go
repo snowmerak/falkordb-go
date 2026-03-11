@@ -23,7 +23,7 @@ func TestPipelineQueries(t *testing.T) {
 		},
 	}
 
-	results, err := graphInstance.Pipeline(ctx, reqs)
+	results, err := graphInstance.PipelineContext(ctx, reqs)
 	assert.NoError(t, err)
 	assert.Len(t, results, 2)
 

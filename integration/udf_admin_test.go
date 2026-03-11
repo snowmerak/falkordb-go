@@ -22,11 +22,11 @@ func TestUDFAdmin(t *testing.T) {
 	require.NoError(t, err)
 
 	// 1. Flush existing
-	err = db.FlushUDFs(ctx)
+	err = db.FlushUDFsContext(ctx)
 	require.NoError(t, err)
 
 	// Verify empty
-	libs, err := db.ListUDF(ctx, )
+	libs, err := db.ListUDFContext(ctx, )
 	require.NoError(t, err)
 	assert.Empty(t, libs)
 
@@ -40,11 +40,11 @@ function myAdd(a, b) {
 }
 falkor.register('test.add', myAdd);
 `
-	err = db.LoadUDF(ctx, "testlib", simpleUDF)
+	err = db.LoadUDFContext(ctx, "testlib", simpleUDF)
 	require.NoError(t, err)
 
 	// 3. List
-	libs, err = db.ListUDF(ctx, )
+	libs, err = db.ListUDFContext(ctx, )
 	require.NoError(t, err)
 	assert.Len(t, libs, 1)
 	if len(libs) > 0 {
@@ -54,7 +54,7 @@ falkor.register('test.add', myAdd);
 	}
 
 	// 4. List With Code
-	libs, err = db.ListUDF(ctx, falkordb.WithUDFCode())
+	libs, err = db.ListUDFContext(ctx, falkordb.WithUDFCode())
 	require.NoError(t, err)
 	assert.Len(t, libs, 1)
 	if len(libs) > 0 {
@@ -62,14 +62,14 @@ falkor.register('test.add', myAdd);
 	}
 
 	// 5. List With Name
-	libs, err = db.ListUDF(ctx, falkordb.WithUDFLibrary("testlib"))
+	libs, err = db.ListUDFContext(ctx, falkordb.WithUDFLibrary("testlib"))
 	require.NoError(t, err)
 	assert.Len(t, libs, 1)
 
 	// 6. List With Name mismatch
 	// Assuming non-existent library returns empty list or error.
 	// We'll see what behavior is.
-	libs, err = db.ListUDF(ctx, falkordb.WithUDFLibrary("nomatch"))
+	libs, err = db.ListUDFContext(ctx, falkordb.WithUDFLibrary("nomatch"))
 	// If it returns error, we handle. If empty list, we handle.
 	if err == nil {
 		assert.Empty(t, libs)
@@ -80,28 +80,28 @@ falkor.register('test.add', myAdd);
 	}
 
 	// 7. Delete
-	err = db.DeleteUDF(ctx, "testlib")
+	err = db.DeleteUDFContext(ctx, "testlib")
 	require.NoError(t, err)
 
-	libs, err = db.ListUDF(ctx, )
+	libs, err = db.ListUDFContext(ctx, )
 	require.NoError(t, err)
 	assert.Empty(t, libs)
 
 	// 8. Test Flush again with multiple
 	// Note: Reuse same code string
-	err = db.LoadUDF(ctx, "lib1", simpleUDF)
+	err = db.LoadUDFContext(ctx, "lib1", simpleUDF)
 	require.NoError(t, err)
-	err = db.LoadUDF(ctx, "lib2", simpleUDF)
+	err = db.LoadUDFContext(ctx, "lib2", simpleUDF)
 	require.NoError(t, err)
 
-	libs, err = db.ListUDF(ctx, )
+	libs, err = db.ListUDFContext(ctx, )
 	require.NoError(t, err)
 	assert.Len(t, libs, 2)
 
-	err = db.FlushUDFs(ctx)
+	err = db.FlushUDFsContext(ctx)
 	require.NoError(t, err)
 
-	libs, err = db.ListUDF(ctx, )
+	libs, err = db.ListUDFContext(ctx, )
 	require.NoError(t, err)
 	assert.Empty(t, libs)
 }

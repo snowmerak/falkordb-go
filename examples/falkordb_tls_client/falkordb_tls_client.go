@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"flag"
@@ -77,9 +76,8 @@ func main() {
 
 	graph := db.SelectGraph("social")
 
-	ctx := context.Background()
 	q := "CREATE (w:WorkPlace {name:'FalkorDB'}) RETURN w"
-	res, _ := graph.Query(ctx, q, nil, nil)
+	res, _ := graph.Query(q, nil, nil)
 
 	res.Next()
 	r := res.Record()

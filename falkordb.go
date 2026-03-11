@@ -136,30 +136,30 @@ func (db *FalkorDB) SelectGraph(graphName string) *graph.Graph {
 }
 
 // CopyGraph copies a graph to a new key.
-func (db *FalkorDB) CopyGraph(ctx context.Context, src, dest string) error {
+func (db *FalkorDB) CopyGraphContext(ctx context.Context, src, dest string) error {
 	return db.Conn.Do(ctx, "GRAPH.COPY", src, dest).Err()
 }
 
 // List all graph names.
 // See: https://docs.falkordb.com/commands/graph.list.html
-func (db *FalkorDB) ListGraphs(ctx context.Context) ([]string, error) {
+func (db *FalkorDB) ListGraphsContext(ctx context.Context) ([]string, error) {
 	return db.Conn.Do(ctx, "GRAPH.LIST").StringSlice()
 }
 
 // Retrieve a DB level configuration.
 // For a list of available configurations see: https://docs.falkordb.com/configuration.html#falkordb-configuration-parameters
-func (db *FalkorDB) ConfigGet(ctx context.Context, key string) (interface{}, error) {
+func (db *FalkorDB) ConfigGetContext(ctx context.Context, key string) (interface{}, error) {
 	return db.Conn.Do(ctx, "GRAPH.CONFIG", "GET", key).Result()
 }
 
 // Update a DB level configuration.
 // For a list of available configurations see: https://docs.falkordb.com/configuration.html#falkordb-configuration-parameters
-func (db *FalkorDB) ConfigSet(ctx context.Context, key string, value interface{}) error {
+func (db *FalkorDB) ConfigSetContext(ctx context.Context, key string, value interface{}) error {
 	return db.Conn.Do(ctx, "GRAPH.CONFIG", "SET", key, value).Err()
 }
 
 // runOnAllMasters executes a command on all master nodes if connected to a cluster.
-func (db *FalkorDB) runOnAllMasters(ctx context.Context, args ...interface{}) error {
+func (db *FalkorDB) runOnAllMastersContext(ctx context.Context, args ...interface{}) error {
 	if cc, ok := db.Conn.(*redis.ClusterClient); ok {
 		return cc.ForEachMaster(ctx, func(ctx context.Context, client *redis.Client) error {
 			return client.Do(ctx, args...).Err()
@@ -169,31 +169,31 @@ func (db *FalkorDB) runOnAllMasters(ctx context.Context, args ...interface{}) er
 }
 
 // LoadUDF loads a user defined function library.
-func (db *FalkorDB) LoadUDF(ctx context.Context, libraryName, code string) error {
-	return db.runOnAllMasters(ctx, "GRAPH.UDF", "LOAD", libraryName, code)
+func (db *FalkorDB) LoadUDFContext(ctx context.Context, libraryName, code string) error {
+	return db.runOnAllMastersContext(ctx, "GRAPH.UDF", "LOAD", libraryName, code)
 }
 
 // LoadUDFReplace loads a user defined function library, replacing it if it already exists.
-func (db *FalkorDB) LoadUDFReplace(ctx context.Context, libraryName, code string) error {
-	return db.runOnAllMasters(ctx, "GRAPH.UDF", "LOAD", "REPLACE", libraryName, code)
+func (db *FalkorDB) LoadUDFReplaceContext(ctx context.Context, libraryName, code string) error {
+	return db.runOnAllMastersContext(ctx, "GRAPH.UDF", "LOAD", "REPLACE", libraryName, code)
 }
 
 // LoadUDFFromFile loads a user defined function library from a file.
-func (db *FalkorDB) LoadUDFFromFile(ctx context.Context, libraryName, filePath string) error {
+func (db *FalkorDB) LoadUDFFromFileContext(ctx context.Context, libraryName, filePath string) error {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return err
 	}
-	return db.LoadUDF(ctx, libraryName, string(content))
+	return db.LoadUDFContext(ctx, libraryName, string(content))
 }
 
 // LoadUDFFromFileReplace loads a user defined function library from a file, replacing it if it already exists.
-func (db *FalkorDB) LoadUDFFromFileReplace(ctx context.Context, libraryName, filePath string) error {
+func (db *FalkorDB) LoadUDFFromFileReplaceContext(ctx context.Context, libraryName, filePath string) error {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return err
 	}
-	return db.LoadUDFReplace(ctx, libraryName, string(content))
+	return db.LoadUDFReplaceContext(ctx, libraryName, string(content))
 }
 
 // IsUdfAlreadyRegisteredError checks if the error is due to the UDF library already being registered.
@@ -231,7 +231,7 @@ func WithUDFCode() UDFListOption {
 
 // ListUDF lists loaded user defined function libraries.
 // It accepts optional arguments to filter by library name and to include source code.
-func (db *FalkorDB) ListUDF(ctx context.Context, opts ...UDFListOption) ([]UDFLibrary, error) {
+func (db *FalkorDB) ListUDFContext(ctx context.Context, opts ...UDFListOption) ([]UDFLibrary, error) {
 	options := &UDFListOptions{}
 	for _, opt := range opts {
 		opt(options)
@@ -289,13 +289,13 @@ func (db *FalkorDB) ListUDF(ctx context.Context, opts ...UDFListOption) ([]UDFLi
 }
 
 // DeleteUDF removes a user defined function library.
-func (db *FalkorDB) DeleteUDF(ctx context.Context, libraryName string) error {
-	return db.runOnAllMasters(ctx, "GRAPH.UDF", "DELETE", libraryName)
+func (db *FalkorDB) DeleteUDFContext(ctx context.Context, libraryName string) error {
+	return db.runOnAllMastersContext(ctx, "GRAPH.UDF", "DELETE", libraryName)
 }
 
 // FlushUDFs removes all user defined function libraries.
-func (db *FalkorDB) FlushUDFs(ctx context.Context) error {
-	return db.runOnAllMasters(ctx, "GRAPH.UDF", "FLUSH")
+func (db *FalkorDB) FlushUDFsContext(ctx context.Context) error {
+	return db.runOnAllMastersContext(ctx, "GRAPH.UDF", "FLUSH")
 }
 
 // CreateConstraint creates a constraint on the graph.
@@ -304,7 +304,7 @@ func (db *FalkorDB) FlushUDFs(ctx context.Context) error {
 // label: the node label or relationship type.
 // properties: attribute names to constrain.
 // See: https://docs.falkordb.com/commands/graph.constraint-create.html
-func (db *FalkorDB) CreateConstraint(ctx context.Context, graphName, constraintType, entityType, label string, properties []string) error {
+func (db *FalkorDB) CreateConstraintContext(ctx context.Context, graphName, constraintType, entityType, label string, properties []string) error {
 	args := []interface{}{
 		"GRAPH.CONSTRAINT", "CREATE",
 		graphName, constraintType, entityType, label,
@@ -318,7 +318,7 @@ func (db *FalkorDB) CreateConstraint(ctx context.Context, graphName, constraintT
 
 // DropConstraint removes a constraint from the graph.
 // See: https://docs.falkordb.com/commands/graph.constraint-drop.html
-func (db *FalkorDB) DropConstraint(ctx context.Context, graphName, constraintType, entityType, label string, properties []string) error {
+func (db *FalkorDB) DropConstraintContext(ctx context.Context, graphName, constraintType, entityType, label string, properties []string) error {
 	args := []interface{}{
 		"GRAPH.CONSTRAINT", "DROP",
 		graphName, constraintType, entityType, label,
@@ -357,7 +357,7 @@ type GraphInfo struct {
 
 // Info returns information about running and/or waiting queries.
 // See: https://docs.falkordb.com/commands/graph.info.html
-func (db *FalkorDB) Info(ctx context.Context, section InfoSection) (*GraphInfo, error) {
+func (db *FalkorDB) InfoContext(ctx context.Context, section InfoSection) (*GraphInfo, error) {
 	args := []interface{}{"GRAPH.INFO"}
 	if section != InfoAll {
 		args = append(args, string(section))

@@ -11,7 +11,7 @@
 - Parses nodes, edges, paths, arrays, maps, points, and vectors into Go types.
 - Exposes query statistics plus PrettyPrint for quick inspection.
 - Supports single instance, cluster, sentinel discovery, and TLS via URL schemes.
-- Full `context.Context` propagation for cancellation and deadline support.
+- Full `context.Context` support via `*Context` method variants.
 - `trunk` is the primary, up-to-date branch.
 
 ## Quick start
@@ -33,7 +33,6 @@ go get github.com/snowmerak/falkordb-go
 package main
 
 import (
-    "context"
     "log"
 
     "github.com/snowmerak/falkordb-go"
@@ -41,8 +40,6 @@ import (
 )
 
 func main() {
-    ctx := context.Background()
-
     db, err := falkordb.FromURL("falkor://0.0.0.0:6379")
     if err != nil {
         log.Fatal(err)
@@ -50,13 +47,13 @@ func main() {
 
     g := db.SelectGraph("social")
 
-    _, err = g.Query(ctx, "CREATE (:Person {name:'John Doe', age:33})", nil, nil)
+    _, err = g.Query("CREATE (:Person {name:'John Doe', age:33})", nil, nil)
     if err != nil {
         log.Fatal(err)
     }
 
     opts := graph.NewQueryOptions().SetTimeout(10) // ms timeout
-    res, err := g.Query(ctx, "MATCH (p:Person) RETURN p.name, p.age", nil, opts)
+    res, err := g.Query("MATCH (p:Person) RETURN p.name, p.age", nil, opts)
     if err != nil {
         log.Fatal(err)
     }
@@ -65,6 +62,23 @@ func main() {
 }
 ```
 
+## Context Support
+
+All methods have a `*Context` variant that accepts `context.Context` as the first parameter, following the `database/sql` pattern:
+
+```go
+ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+defer cancel()
+
+// Using Context variant
+res, err := g.QueryContext(ctx, "MATCH (p:Person) RETURN p", nil, nil)
+
+// Legacy (uses context.Background() internally)
+res, err := g.Query("MATCH (p:Person) RETURN p", nil, nil)
+```
+
+Available `*Context` methods: `QueryContext`, `ROQueryContext`, `DeleteContext`, `ProfileContext`, `PipelineContext`, `MemoryUsageContext`, `CallProcedureContext`, `ExecutionPlanContext`, `SlowLogContext`, `SlowLogResetContext`, `CopyGraphContext`, `ListGraphsContext`, `ConfigGetContext`, `ConfigSetContext`, `LoadUDFContext`, `ListUDFContext`, `DeleteUDFContext`, `FlushUDFsContext`, `CreateConstraintContext`, `DropConstraintContext`, `InfoContext`.
+
 ## Usage and examples
 
 The complete API is documented on [pkg.go.dev](https://pkg.go.dev/github.com/snowmerak/falkordb-go).
@@ -72,9 +86,8 @@ The complete API is documented on [pkg.go.dev](https://pkg.go.dev/github.com/sno
 - Query vs ROQuery
 
 ```go
-ctx := context.Background()
-res, err := g.Query(ctx, "MATCH (p:Person) RETURN p.name", nil, nil)
-roRes, err := g.ROQuery(ctx, "MATCH (p:Person) RETURN p.name", nil, nil)
+res, err := g.Query("MATCH (p:Person) RETURN p.name", nil, nil)
+roRes, err := g.ROQuery("MATCH (p:Person) RETURN p.name", nil, nil)
 ```
 
 - Iterating results
@@ -91,7 +104,7 @@ for res.Next() {
 
 ```go
 opts := graph.NewQueryOptions().SetTimeout(5)
-res, err := g.Query(ctx, "UNWIND range(0, 1000000) AS v RETURN v", nil, opts)
+res, err := g.Query("UNWIND range(0, 1000000) AS v RETURN v", nil, opts)
 ```
 
 - Read-only client
@@ -103,10 +116,10 @@ if err != nil { log.Fatal(err) }
 g := db.SelectGraph("social")
 
 // This will error because the graph is read-only
-_, err = g.Query(ctx, "CREATE (:X)", nil, nil)
+_, err = g.Query("CREATE (:X)", nil, nil)
 
 // RO queries are allowed
-res, err := g.ROQuery(ctx, "MATCH (n) RETURN n", nil, nil)
+res, err := g.ROQuery("MATCH (n) RETURN n", nil, nil)
 ```
 
 - Pipelined batch queries
@@ -123,7 +136,7 @@ reqs := []graph.QueryRequest{
         Params:  map[string]interface{}{"name": "Japan"},
     },
 }
-batch, err := g.Pipeline(ctx, reqs)
+batch, err := g.Pipeline(reqs)
 if err != nil {
     log.Fatal(err)
 }
@@ -136,7 +149,7 @@ Queries can be run with a millisecond-level timeout as described in [the documen
 
 ```go
 options := graph.NewQueryOptions().SetTimeout(10) // 10-millisecond timeout
-res, err := g.Query(ctx, "MATCH (src {name: 'John Doe'})-[*]->(dest) RETURN dest", nil, options)
+res, err := g.Query("MATCH (src {name: 'John Doe'})-[*]->(dest) RETURN dest", nil, options)
 ```
 
 ## Advanced Graph Operations
@@ -146,7 +159,7 @@ res, err := g.Query(ctx, "MATCH (src {name: 'John Doe'})-[*]->(dest) RETURN dest
 You can profile a query execution plan using the `Profile` method.
 
 ```go
-res, err := g.Profile(ctx, "MATCH (p:Person) RETURN p", nil, nil)
+res, err := g.Profile("MATCH (p:Person) RETURN p", nil, nil)
 if err != nil {
     log.Fatal(err)
 }
@@ -158,7 +171,7 @@ if err != nil {
 You can copy a graph to a new key.
 
 ```go
-err := db.CopyGraph(ctx, "social", "social_backup")
+err := db.CopyGraph("social", "social_backup")
 ```
 
 ### Memory Usage
@@ -166,7 +179,7 @@ err := db.CopyGraph(ctx, "social", "social_backup")
 You can retrieve the memory usage of a specific graph.
 
 ```go
-mem, err := g.MemoryUsage(ctx, -1) // -1 for default sample count
+mem, err := g.MemoryUsage(-1) // -1 for default sample count
 // mem is a map[string]interface{} containing memory stats
 ```
 
@@ -176,13 +189,13 @@ Create and drop UNIQUE or MANDATORY constraints.
 
 ```go
 // Create a UNIQUE constraint (requires an existing index)
-err := db.CreateConstraint(ctx, "social", "UNIQUE", "NODE", "Person", []string{"name"})
+err := db.CreateConstraint("social", "UNIQUE", "NODE", "Person", []string{"name"})
 
 // Create a MANDATORY constraint
-err := db.CreateConstraint(ctx, "social", "MANDATORY", "NODE", "Person", []string{"age"})
+err := db.CreateConstraint("social", "MANDATORY", "NODE", "Person", []string{"age"})
 
 // Drop a constraint
-err := db.DropConstraint(ctx, "social", "MANDATORY", "NODE", "Person", []string{"age"})
+err := db.DropConstraint("social", "MANDATORY", "NODE", "Person", []string{"age"})
 ```
 
 ### Slow Log
@@ -190,12 +203,12 @@ err := db.DropConstraint(ctx, "social", "MANDATORY", "NODE", "Person", []string{
 Retrieve and reset the slowest queries.
 
 ```go
-entries, err := g.SlowLog(ctx)
+entries, err := g.SlowLog()
 for _, e := range entries {
     log.Printf("ts=%s cmd=%s query=%s duration=%s", e.Timestamp, e.Command, e.Query, e.Duration)
 }
 
-err = g.SlowLogReset(ctx)
+err = g.SlowLogReset()
 ```
 
 ### Server Info
@@ -203,7 +216,7 @@ err = g.SlowLogReset(ctx)
 Query running and waiting queries across the server.
 
 ```go
-info, err := db.Info(ctx, falkordb.InfoAll) // or InfoRunningQueries, InfoWaitingQueries
+info, err := db.Info(falkordb.InfoAll) // or InfoRunningQueries, InfoWaitingQueries
 log.Printf("Running: %d, Waiting: %d", len(info.RunningQueries), len(info.WaitingQueries))
 ```
 
@@ -217,14 +230,14 @@ You can load UDFs from a string or a file. You can also use the `Replace` varian
 
 ```go
 // Load from string
-err := db.LoadUDF(ctx, "mylib", "def my_func(a, b): return a + b")
+err := db.LoadUDF("mylib", "def my_func(a, b): return a + b")
 
 // Load from file
-err := db.LoadUDFFromFile(ctx, "mylib", "/path/to/lib.py")
+err := db.LoadUDFFromFile("mylib", "/path/to/lib.py")
 
 // Load and replace if exists
-err := db.LoadUDFReplace(ctx, "mylib", "def my_func(a, b): return a * b")
-err := db.LoadUDFFromFileReplace(ctx, "mylib", "/path/to/lib.py")
+err := db.LoadUDFReplace("mylib", "def my_func(a, b): return a * b")
+err := db.LoadUDFFromFileReplace("mylib", "/path/to/lib.py")
 ```
 
 ### Listing UDFs
@@ -233,13 +246,13 @@ You can list loaded UDF libraries, optionally filtering by name or including the
 
 ```go
 // List all libraries
-libs, err := db.ListUDF(ctx)
+libs, err := db.ListUDF()
 
 // List specific library
-libs, err := db.ListUDF(ctx, falkordb.WithUDFLibrary("mylib"))
+libs, err := db.ListUDF(falkordb.WithUDFLibrary("mylib"))
 
 // List with source code
-libs, err := db.ListUDF(ctx, falkordb.WithUDFCode())
+libs, err := db.ListUDF(falkordb.WithUDFCode())
 ```
 
 ### Deleting UDFs
@@ -248,10 +261,10 @@ You can delete a specific library or flush all libraries.
 
 ```go
 // Delete a specific library
-err := db.DeleteUDF(ctx, "mylib")
+err := db.DeleteUDF("mylib")
 
 // Flush all libraries
-err := db.FlushUDFs(ctx)
+err := db.FlushUDFs()
 ```
 
 ## Supported Types

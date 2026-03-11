@@ -21,7 +21,7 @@ func TestGraphProfile(t *testing.T) {
 
 	for _, q := range queries {
 		t.Run(q, func(t *testing.T) {
-			profile, err := graphInstance.Profile(ctx, q, nil, nil)
+			profile, err := graphInstance.ProfileContext(ctx, q, nil, nil)
 			assert.Nil(t, err)
 			assert.NotEmpty(t, profile, "Profile should not be empty")
 

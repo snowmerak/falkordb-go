@@ -34,9 +34,9 @@ func createGraph() {
 	}
 
 	graphInstance = db.SelectGraph("social")
-	graphInstance.Delete(ctx)
+	graphInstance.DeleteContext(ctx)
 
-	_, err = graphInstance.Query(ctx, "CREATE (:Person {name: 'John Doe', age: 33, gender: 'male', status: 'single'})-[:Visited {year: 2017}]->(c:Country {name: 'Japan', population: 126800000})", nil, nil)
+	_, err = graphInstance.QueryContext(ctx, "CREATE (:Person {name: 'John Doe', age: 33, gender: 'male', status: 'single'})-[:Visited {year: 2017}]->(c:Country {name: 'Japan', population: 126800000})", nil, nil)
 	if err != nil {
 		panic(err)
 	}

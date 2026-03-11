@@ -24,15 +24,15 @@ func TestReadOnlyClient(t *testing.T) {
 	g := db.SelectGraph("social_ro")
 
 	// Write should fail
-	_, err = g.Query(ctx, "CREATE (:X)", nil, nil)
+	_, err = g.QueryContext(ctx, "CREATE (:X)", nil, nil)
 	assert.Error(t, err, "write query should fail on read-only client")
 
 	// Pipeline with a write should also fail
-	_, err = g.Pipeline(ctx, []graph.QueryRequest{{Query: "CREATE (:Y)"}})
+	_, err = g.PipelineContext(ctx, []graph.QueryRequest{{Query: "CREATE (:Y)"}})
 	assert.Error(t, err, "pipeline write should fail on read-only client")
 
 	// RO query on empty key may return an error from the server; ensure no panic.
-	res, err := g.ROQuery(ctx, "MATCH (n) RETURN n", nil, nil)
+	res, err := g.ROQueryContext(ctx, "MATCH (n) RETURN n", nil, nil)
 	if err == nil && res != nil {
 		assert.True(t, res.Empty())
 	} else {
